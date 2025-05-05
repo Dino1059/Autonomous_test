@@ -1,0 +1,9 @@
+fastapi
+pydantic
+pyperclip
+langchain-openai
+langchain-google-genai
+langchain-core
+lmnr[all]
+browser-use
+playwright

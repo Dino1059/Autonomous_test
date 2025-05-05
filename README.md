@@ -1,37 +1,68 @@
-# AutoTester WebUI - Key Features
+# Core API for AutoTesterWebUI
 
-AutoTester WebUI simplifies LLM-powered browser automation testing.
+## Features
 
-## Core features
+- **Browser Automation**: Execute complex web testing tasks with Browser-use
+- **Task Management**: Run, monitor, and cancel automation tasks via API
+- **Action Templates**: Predefined templates for common browser interactions 
+- **Custom Actions**: Create and execute custom browser automation scripts
+- **User Simulation**: Simulate user behavior for interactive testing
+- **REST API**: FastAPI-based endpoints with comprehensive documentation
 
-### 1. Agent/Tester Creator
+## Playround
+See the `test_api` for examples.
 
-Define reusable test logic templates:
+## Installation Guide
 
-*   **Create/Manage:** Build, save, edit, delete, import/export agents/testers.
-*   **Prompt Templates:** Craft agent/tester instructions using text and `{placeholder_N}` variables for data injection.
-*   **LLM Config:** Select provider (Google, OpenAI, etc.), model, temperature, and max steps.
-*   **Control:** Optionally use structured output models or exclude specific browser actions.
-*   **Filter & View:** Easily find saved agents by type.
+```bash
+# Clone the repository
+git clone https://github.com/DopikAI-Labs/ai-agent-tester/tree/dev/core-api
+cd ai-agent-tester
 
-### 2. CSV Test Runner
+# Create and activate virtual environment
+python -m venv venv
+source venv/bin/activate  # Windows: venv\Scripts\activate
 
-Run data-driven tests using agents/testers and CSV files:
+# Install dependencies
+pip install -r requirements.txt
 
-*   **Upload & Preview:** Load test data from `.csv` files (comma/tab separated) and preview content.
-*   **Select Workflow:** Choose pre-defined agents and testers.
-*   **Map Data:** Link `{placeholder_N}` variables in agent/tester prompts to columns in your CSV.
-*   **Configure:** Set the target URL and session ID for the test run.
-*   **Preview & Run:** Validate setup and execute the agent workflow row-by-row from the CSV.
-*   **Track & Analyze:** Monitor progress, view status per test case, inspect detailed results (including tester interactions and errors) in a modal, and export all results to JSON.
+# Install Playwright browsers
+playwright install
+```
 
-### 3. Settings
+## Project Structure
 
-Configure necessary credentials and connection details:
+```
+app/
+├── controllers/       # Business logic for handling API requests
+│   ├── actions.py     # Available browser automation actions
+│   ├── tasks.py       # Task execution and management
+│   └── templates.py   # Template management for custom actions
+├── routers/           # API route definitions
+│   ├── actions_router.py
+│   ├── tasks_router.py
+│   └── templates_router.py
+├── serializers/       # Data models and schemas
+│   └── models.py      # Pydantic models for request/response validation
+├── utils/             # Helper functions and utilities
+│   ├── browser_actions.py  # Browser interaction implementations
+│   ├── globals.py          # Global variables and state management
+│   ├── llm_utils.py        # LLM integration utilities
+│   └── task_execution.py   # Background task execution logic
+└── main.py            # FastAPI application entry point
+```
 
-*   **API Keys:** Enter and save keys for OpenAI and Google Gemini.
-*   **Laminar:** Configure the API key, base URL, HTTP port, and gRPC port for tracking browser automation service.
+### Key Components
 
-## Installation
-
-Only Browser-Use is needed. See the installation instructions at https://github.com/browser-use/browser-use.
+- **main.py**: Initializes the FastAPI application, configures middleware, and includes routers
+- **controllers/**: Contains the business logic for the application
+  - **actions.py**: Defines available browser automation actions like clicking, scrolling, etc.
+  - **tasks.py**: Manages the execution of automation tasks with background processing
+  - **templates.py**: Provides reusable code templates for custom automation actions
+- **routers/**: Defines API endpoints and routes requests to appropriate controllers
+- **serializers/models.py**: Contains Pydantic models for request/response validation and type safety
+- **utils/**: Helper functions and utilities
+  - **browser_actions.py**: Core implementation of browser automation capabilities
+  - **globals.py**: Manages global state and shared resources
+  - **llm_utils.py**: Integration with language models for simulation
+  - **task_execution.py**: Background task processing logic
