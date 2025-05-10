@@ -174,3 +174,9 @@ cython_debug/
 .pypirc
 
 tempfiles/
+
+# Ignore webui folder
+webui/
+
+# Ignore TODO.md file
+TODO.md

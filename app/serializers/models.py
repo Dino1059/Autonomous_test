@@ -17,7 +17,6 @@ class TaskConfig(BaseModel):
     max_steps: int = Field(30, description="Maximum number of steps for this task")
     
     # Controller configuration
-    use_output_model: bool = Field(False, description="Whether to use an output model")
     output_model_fields: Optional[Dict[str, Any]] = Field(None, description="Custom output model fields definition (if use_output_model is True)")
     exclude_actions: List[str] = Field(default_factory=list, description="List of actions to exclude from the controller")
     
@@ -26,13 +25,17 @@ class TaskConfig(BaseModel):
     llm_model: str = Field("gemini-2.0-flash", description="LLM model name")
     llm_temperature: float = Field(0.0, description="LLM temperature")
 
+    # Memory configuration
+    enable_memory: bool = Field(False, description="Whether to enable memory")
+    memory_interval: int = Field(7, description="Memory interval")
+    initial_actions: List[Dict[str, Any]] = Field(default_factory=list, description="Initial actions to perform")
+
 class CustomAction(BaseModel):
     name: str = Field(..., description="Name of the action to display to the agent")
     code: str = Field(..., description="Python code for the action function")
 
 class RunTaskRequest(BaseModel):
     tasks: List[TaskConfig] = Field(..., description="List of tasks to run")
-    target_url: str = Field(..., description="Target URL to test")
     laminar_api_key: str = Field("", description="Laminar API key")
     laminar_base_url: str = Field("", description="Laminar base URL")
     laminar_http_port: int = Field(0, description="Laminar HTTP port")

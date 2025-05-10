@@ -18,15 +18,18 @@ def test_task_cancellation():
                 "name": "Long-Running Task",
                 "prompt": "Visit the website and perform a series of complex interactions such as scrolling through multiple pages, clicking on various elements, and extracting data from different sections",
                 "max_steps": 50,  # High number of steps
-                "use_output_model": False,
                 "output_model_fields": None,
                 "exclude_actions": [],
                 "llm_provider": "google",
                 "llm_model": "gemini-2.0-flash",
-                "llm_temperature": 0.0
+                "llm_temperature": 0.0,
+                "enable_memory": False,
+                "memory_interval": 10,
+                "initial_actions": [
+                    {"open_tab": {"url": os.getenv("TARGET_URL")}}
+                ]
             }
         ],
-        "target_url": os.getenv("TARGET_URL"), 
         "laminar_api_key": os.getenv("LAMINAR_API_KEY", ""),
         "laminar_base_url": os.getenv("LAMINAR_BASE_URL", ""),
         "laminar_http_port": int(os.getenv("LAMINAR_HTTP_PORT", "0") or 0),
@@ -57,7 +60,7 @@ def test_task_cancellation():
     
     # Extract task ID
     try:
-        task_id = response.json()["message"].split(": ")[1]
+        task_id = response.json()['data']["message"].split(": ")[1]
         print(f"Task ID: {task_id}")
     except (KeyError, IndexError) as e:
         print(f"Could not extract task ID from response: {e}")
@@ -119,7 +122,7 @@ def poll_for_cancellation(task_id):
             response = requests.get(f"{API_BASE_URL}/tasks/{task_id}")
             response.raise_for_status()
             
-            data = response.json()
+            data = response.json()['data']
             status = data.get("status")
             message = data.get("message", "")
             
@@ -160,7 +163,7 @@ def list_all_tasks():
         response = requests.get(f"{API_BASE_URL}/tasks")
         response.raise_for_status()
         
-        tasks_data = response.json()
+        tasks_data = response.json()['data']
         task_count = tasks_data.get("count", 0)
         tasks = tasks_data.get("tasks", {})
         

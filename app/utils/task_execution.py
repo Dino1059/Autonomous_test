@@ -18,14 +18,16 @@ from playwright.sync_api import ElementHandle
 import pyperclip
 from src.llms.base import BaseLLMWorker
 
-from app.utils.globals import SETTINGS, BACKGROUND_TASKS, USER_SIMULATOR_INTERACTIONS, CANCELLATION_FLAGS, llm_worker
+from app.utils.globals import SETTINGS, BACKGROUND_TASKS, USER_SIMULATOR_INTERACTIONS, CANCELLATION_FLAGS, get_or_initialize_llm_worker
 from app.utils.browser_actions import paste_from_clipboard, call_user_simulator, get_system_message, click_the_send_button, sanitize_response
-from app.utils.llm_utils import create_llm_for_task, create_dynamic_output_model
+from app.utils.llm_utils import create_llm_for_task, create_model_from_schema
 from app.serializers.models import MetadataCampaign, TaskConfig
+
+import json_repair
+
 
 async def run_tasks(
     tasks: List[Dict[str, Any]],
-    target_url: str,
     laminar_api_key: str,
     laminar_base_url: str,
     laminar_http_port: int,
@@ -40,30 +42,38 @@ async def run_tasks(
 ) -> Tuple[List[Dict[str, Any]], List[Dict[str, Any]]]:
     """Run multiple browser automation tasks with specified settings in the same browser context"""
     
-    # Set global simulator settings for access by call_user_simulator
-    global llm_worker
-    
     # Set up logging for LLM initialization
     logger = logging.getLogger("RUN_TASKS")
     logger.info(f"Initializing LLM worker with provider: {sim_provider}, model: {sim_model}, temperature: {sim_temperature}, task: {simulator_task}")
     
-    # Initialize the LLM worker with the specified provider
-    llm_worker = BaseLLMWorker(
-        provider=sim_provider,
-        model=sim_model,
-        temperature=sim_temperature
-    )
-    
     # Update settings with API values
     SETTINGS.update({
-        "web_app_url": target_url,
         "laminar_project_api_key": laminar_api_key,
         "laminar_base_url": laminar_base_url,
         "laminar_http_port": laminar_http_port,
         "laminar_grpc_port": laminar_grpc_port,
         "session_id": session_id,
-        "user_simulator_task": simulator_task
+        "user_simulator_task": simulator_task,
+        "simulator_provider": sim_provider,
+        "simulator_model": sim_model,
+        "simulator_temperature": sim_temperature
     })
+    
+    # Initialize the LLM worker with the specified provider
+    try:
+        llm_worker = get_or_initialize_llm_worker(
+            provider=sim_provider,
+            model=sim_model,
+            temperature=sim_temperature
+        )
+        
+        if llm_worker is None:
+            raise Exception(f"Failed to initialize LLM worker with provider: {sim_provider}, model: {sim_model}")
+            
+        logger.info("LLM worker initialized successfully")
+    except Exception as e:
+        logger.error(f"Error initializing LLM worker: {str(e)}")
+        return [{"status": "failed", "message": f"Failed to initialize LLM worker: {str(e)}"}], []
     
     # Initialize Laminar
     if SETTINGS["laminar_project_api_key"] and SETTINGS["laminar_base_url"]:
@@ -78,10 +88,6 @@ async def run_tasks(
     else:
         logger.info("Laminar initialization skipped - API key or base URL not provided")
     
-    # Define initial actions for browser
-    initial_actions = [
-        {'open_tab': {'url': SETTINGS["web_app_url"]}},
-    ]
     
     try:
         all_results = []
@@ -112,13 +118,10 @@ async def run_tasks(
                 
                 # Create a new controller for this task
                 output_model = None
-                if task_config.use_output_model:
-                    if task_config.output_model_fields:
-                        # Use custom output model
-                        output_model = create_dynamic_output_model(task_config.output_model_fields)
-                    else:
-                        # Fallback to default MetadataCampaign model
-                        output_model = MetadataCampaign
+                if task_config.output_model_fields:
+                    output_model = create_model_from_schema(task_config.output_model_fields)
+                else:
+                    output_model = None
                 
                 controller = Controller(
                     output_model=output_model, 
@@ -144,9 +147,9 @@ async def run_tasks(
                     llm=llm,
                     controller=controller,
                     browser_context=context,
-                    enable_memory=(i > 0),  # Enable memory after first task
-                    memory_interval=7,
-                    initial_actions=initial_actions if i == 0 else None,  # Only use initial actions for first task
+                    enable_memory=task_config.enable_memory if task_config.enable_memory is not None else True,
+                    memory_interval=task_config.memory_interval if task_config.memory_interval else 10,
+                    initial_actions=task_config.initial_actions if task_config.initial_actions else None,
                 )
                 
                 # Define a cancellation check callback
@@ -189,6 +192,7 @@ async def run_tasks(
                     
                     # Get results
                     final_result = history.final_result()
+                    final_result = json_repair.loads(final_result)
                     
                     # Simply convert the history to a string
                     history_info = {
@@ -311,7 +315,6 @@ def register_custom_action(controller, action_config):
 async def run_tasks_background(
     task_id: str,
     tasks: List[Dict[str, Any]],
-    target_url: str,
     laminar_api_key: str,
     laminar_base_url: str,
     laminar_http_port: int,
@@ -333,7 +336,6 @@ async def run_tasks_background(
         
         results, history = await run_tasks(
             tasks,
-            target_url,
             laminar_api_key,
             laminar_base_url,
             laminar_http_port,

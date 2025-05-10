@@ -47,7 +47,17 @@ async def call_user_simulator(temp_params: str) -> ActionResult:
     # Step 1: Get question from clipboard
     clipboard_text = pyperclip.paste().strip()
     
-    from app.utils.globals import SETTINGS, USER_SIMULATOR_INTERACTIONS, llm_worker
+    from app.utils.globals import SETTINGS, USER_SIMULATOR_INTERACTIONS, get_or_initialize_llm_worker
+    
+    logger = logging.getLogger("CALL USER SIMULATOR")
+    
+    # Get or initialize the LLM worker
+    llm_worker = get_or_initialize_llm_worker()
+    
+    if llm_worker is None:
+        error_msg = "LLM worker could not be initialized. Please ensure simulator settings are configured."
+        logger.error(error_msg)
+        raise Exception(error_msg)
     
     session_id = SETTINGS["session_id"]
     
@@ -67,7 +77,6 @@ async def call_user_simulator(temp_params: str) -> ActionResult:
         system_message = data.get("system_message", clipboard_text)
         image_urls = data.get("image_url", [])
         
-        logger = logging.getLogger("CALL USER SIMULATOR")
         logger.info(f"Extracted system message: {system_message}")
         logger.info(f"Image URLs: {image_urls}")
         
@@ -91,7 +100,6 @@ async def call_user_simulator(temp_params: str) -> ActionResult:
         
     except Exception as e:
         # If JSON parsing fails, use the clipboard text directly
-        logger = logging.getLogger("CALL USER SIMULATOR")
         logger.warning(f"Failed to parse JSON: {e}")
         
         # Use customized prompt from settings if available
@@ -114,8 +122,14 @@ async def call_user_simulator(temp_params: str) -> ActionResult:
         system_message = clipboard_text
 
     # Step 2: Get response from the user simulator LLM
-    response = llm_worker.get_response(question, session_id)
-    json_tester_response = json_repair.loads(response.content)
+    # Handle potential images in the request - pass the list directly to get_response
+    if image_urls and isinstance(image_urls, list) and len(image_urls) > 0:
+        response = llm_worker.get_response(question, session_id, image_urls)
+    else:
+        response = llm_worker.get_response(question, session_id)
+    
+    # Our get_response now returns the content directly, not an object with content attribute
+    json_tester_response = json_repair.loads(response)
     logger.info(f"JSON Response: {json_tester_response}")
     
     # Step 3: Sanitize response
@@ -155,7 +169,7 @@ async def get_system_message(temp_params: str, browser: BrowserContext):
     
     class SystemMessage(BaseModel):
         system_message: str = Field(description="system message")
-        image_url: List[str] = Field(description="list of url of the image")
+        image_url: List[str] = Field(description="list of url of the image, end with .png/.jpg/.jpeg/.gif/.webp")
 
     page_extraction_llm = ChatGoogleGenerativeAI(
         model="gemini-2.0-flash",

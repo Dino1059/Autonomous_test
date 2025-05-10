@@ -10,10 +10,23 @@ API_BASE_URL = "http://localhost:8081"
 def test_custom_output_model():
     # Define custom output model fields
     output_model_fields = {
-        "main_title": {
-            "type": "str",
-            "description": "Main title of the page"
-        },
+        "type": "object",
+        "properties": {
+          "response": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "title": {
+                  "type": "string"
+                },
+                "url": {
+                  "type": "string"
+                }
+              }
+            }
+          }
+        }
     }
 
     # Sample task with custom output model
@@ -21,17 +34,20 @@ def test_custom_output_model():
         "tasks": [
             {
                 "name": "Test Custom Output Model",
-                "prompt": "Visit the website and extract the main title",
+                "prompt": "Go to google and search for UIT, then extract the main title and url of first three results.",
                 "max_steps": 30,
-                "use_output_model": True,
                 "output_model_fields": output_model_fields,
                 "exclude_actions": [],
                 "llm_provider": "google",
                 "llm_model": "gemini-2.0-flash",
-                "llm_temperature": 0.0
+                "llm_temperature": 0.0,
+                "enable_memory": False,
+                "memory_interval": 10,
+                "initial_actions": [
+                    {"open_tab": {"url": "https://www.google.com"}}
+                ]
             }
         ],
-        "target_url": os.getenv("TARGET_URL"), 
         "laminar_api_key": os.getenv("LAMINAR_API_KEY", ""),
         "laminar_base_url": os.getenv("LAMINAR_BASE_URL", ""),
         "laminar_http_port": int(os.getenv("LAMINAR_HTTP_PORT", "0") or 0),
@@ -53,7 +69,7 @@ def test_custom_output_model():
     
     if response.status_code == 200:
         # Extract task ID
-        task_id = response.json()["message"].split(": ")[1]
+        task_id = response.json()['data']["message"].split(": ")[1]
         print(f"Task ID: {task_id}")
         
         # Poll for results
@@ -71,7 +87,7 @@ def poll_results(task_id):
         response = requests.get(f"{API_BASE_URL}/tasks/{task_id}")
         
         if response.status_code == 200:
-            data = response.json()
+            data = response.json()['data']
             status = data.get("status")
             
             print(f"Task status: {status}")

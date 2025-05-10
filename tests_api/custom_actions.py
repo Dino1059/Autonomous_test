@@ -84,17 +84,21 @@ def test_custom_action():
                 Visit the website and perform the following:
                 1. Extract all links from the page using the custom action
                 2. Count all button elements on the page using the custom action with selector=button
+                ONLY use the custom actions provided: extract_all_links, count_elements
                 """,
                 "max_steps": 20,
-                "use_output_model": False,
                 "output_model_fields": None,
-                "exclude_actions": [],
+                "exclude_actions": ["search_google", "go_back", "input_text", "save_pdf", "switch_tab", "close_tab", "extract_content", "send_keys", "get_dropdown_options", "select_dropdown_options", "drag_drop", "get_drag_elements", "get_element_coordinates", "execute_drag_operation", "click_element", "click_element_by_text", "scroll", "click_the_send_button"],
                 "llm_provider": "google",
                 "llm_model": "gemini-2.0-flash",
-                "llm_temperature": 0.0
+                "llm_temperature": 0.0,
+                "enable_memory": False,
+                "memory_interval": 10,
+                "initial_actions": [
+                    {"open_tab": {"url": "https://kittyclysm.com/"}}
+                ]
             }
         ],
-        "target_url": os.getenv("TARGET_URL"), 
         "laminar_api_key": os.getenv("LAMINAR_API_KEY", ""),
         "laminar_base_url": os.getenv("LAMINAR_BASE_URL", ""),
         "laminar_http_port": int(os.getenv("LAMINAR_HTTP_PORT", "0") or 0),
@@ -116,7 +120,7 @@ def test_custom_action():
     
     if response.status_code == 200:
         # Extract task ID
-        task_id = response.json()["message"].split(": ")[1]
+        task_id = response.json()['data']['message'].split(": ")[1]
         print(f"Task ID: {task_id}")
         
         # Poll for results
@@ -124,40 +128,7 @@ def test_custom_action():
     else:
         print(f"Failed to start task: {response.text}")
 
-def test_get_action_templates():
-    """Test the endpoint that retrieves action templates"""
-    
-    # Request templates
-    response = requests.get(f"{API_BASE_URL}/templates/actions")
-    
-    # Print response
-    print(f"Status code: {response.status_code}")
-    
-    if response.status_code == 200:
-        templates = response.json()
-        print("Available templates:")
-        for template_name, template_code in templates.items():
-            print(f"\n--- {template_name} Template ---")
-            print(template_code[:100] + "..." if len(template_code) > 100 else template_code)
-    else:
-        print(f"Failed to get templates: {response.text}")
 
-def test_available_actions():
-    """Test the endpoint that lists available actions"""
-    
-    # Request available actions
-    response = requests.get(f"{API_BASE_URL}/actions")
-    
-    # Print response
-    print(f"Status code: {response.status_code}")
-    
-    if response.status_code == 200:
-        actions = response.json()
-        print("Available actions:")
-        for action in actions:
-            print(f"- {action}")
-    else:
-        print(f"Failed to get available actions: {response.text}")
 
 def poll_results(task_id):
     """Poll the API for task results"""
@@ -171,7 +142,7 @@ def poll_results(task_id):
         response = requests.get(f"{API_BASE_URL}/tasks/{task_id}")
         
         if response.status_code == 200:
-            data = response.json()
+            data = response.json()['data']
             status = data.get("status")
             
             print(f"Task status: {status}")
@@ -181,20 +152,6 @@ def poll_results(task_id):
                 print("Results:")
                 print(json.dumps(data.get("results"), indent=2))
                 
-                # Extract more detailed history to see custom action usage
-                if data.get("history"):
-                    print("\nTask History (focusing on custom actions):")
-                    for idx, history_item in enumerate(data.get("history")):
-                        if "history" in history_item:
-                            for step in history_item["history"]:
-                                if (
-                                    "action" in step and 
-                                    (step["action"] == "Extract all links from the page" or 
-                                     step["action"] == "Count elements by selector")
-                                ):
-                                    print(f"\nStep {step.get('step', 'unknown')}:")
-                                    print(f"Action: {step.get('action')}")
-                                    print(f"Result: {step.get('result', {}).get('extracted_content')}")
                 return
             elif status == "failed":
                 print("Task failed!")
@@ -213,9 +170,3 @@ def poll_results(task_id):
 if __name__ == "__main__":
     print("===== Testing Custom Actions =====")
     test_custom_action()
-    
-    print("\n===== Testing Action Templates =====")
-    test_get_action_templates()
-    
-    print("\n===== Testing Available Actions List =====")
-    test_available_actions() 

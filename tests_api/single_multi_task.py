@@ -18,15 +18,18 @@ def test_basic_task_execution():
                 "name": "Basic Navigation Test",
                 "prompt": "Visit the website and verify the page has loaded correctly",
                 "max_steps": 20,
-                "use_output_model": False,
                 "output_model_fields": None,
                 "exclude_actions": [],
                 "llm_provider": "google",
                 "llm_model": "gemini-2.0-flash",
-                "llm_temperature": 0.0
+                "llm_temperature": 0.0,
+                "enable_memory": False,
+                "memory_interval": 10,
+                "initial_actions": [
+                    {"open_tab": {"url": os.getenv("TARGET_URL")}}
+                ]
             }
         ],
-        "target_url": os.getenv("TARGET_URL"), 
         "laminar_api_key": os.getenv("LAMINAR_API_KEY", ""),
         "laminar_base_url": os.getenv("LAMINAR_BASE_URL", ""),
         "laminar_http_port": int(os.getenv("LAMINAR_HTTP_PORT", "0") or 0),
@@ -58,6 +61,51 @@ def test_basic_task_execution():
 
 def test_multiple_tasks():
     """Test running multiple sequential tasks in the same browser context"""
+    # Define custom output model fields for task 1
+    output_model_task1 = {
+        "type": "object",
+        "properties": {
+            "pageTitle": {
+                "type": "string",
+                "description": "The title of the loaded webpage"
+            },
+            "pageUrl": {
+                "type": "string",
+                "description": "The URL of the loaded webpage"
+            },
+            "loadStatus": {
+                "type": "string",
+                "enum": ["success", "partial", "failed"],
+                "description": "Status of the page load"
+            }
+        },
+        "required": ["pageTitle", "pageUrl", "loadStatus"]
+    }
+    
+    # Define custom output model fields for task 2
+    output_model_task2 = {
+        "type": "object",
+        "properties": {
+            "interactionType": {
+                "type": "string",
+                "enum": ["button", "link", "form", "other"],
+                "description": "Type of element interacted with"
+            },
+            "elementText": {
+                "type": "string",
+                "description": "Text content of the interacted element"
+            },
+            "resultingPage": {
+                "type": "string",
+                "description": "URL or title of the page after interaction"
+            },
+            "success": {
+                "type": "boolean",
+                "description": "Whether the interaction was successful"
+            }
+        },
+        "required": ["interactionType", "success"]
+    }
     
     # Sample tasks configuration
     payload = {
@@ -66,26 +114,30 @@ def test_multiple_tasks():
                 "name": "Navigate to Website",
                 "prompt": "Visit the website and verify the page has loaded correctly",
                 "max_steps": 15,
-                "use_output_model": False,
-                "output_model_fields": None,
+                "output_model_fields": output_model_task1,
                 "exclude_actions": [],
                 "llm_provider": "google",
                 "llm_model": "gemini-2.0-flash",
-                "llm_temperature": 0.0
+                "llm_temperature": 0.0,
+                "enable_memory": False,
+                "memory_interval": 10,
+                "initial_actions": [
+                    {"open_tab": {"url": os.getenv("TARGET_URL")}}
+                ]
             },
             {
                 "name": "Interact with Page",
                 "prompt": "Find and click on a button or link on the page",
                 "max_steps": 15,
-                "use_output_model": False,
-                "output_model_fields": None,
+                "output_model_fields": output_model_task2,
                 "exclude_actions": [],
                 "llm_provider": "google",
                 "llm_model": "gemini-2.0-flash",
-                "llm_temperature": 0.0
+                "llm_temperature": 0.0,
+                "enable_memory": False,
+                "memory_interval": 10
             }
         ],
-        "target_url": os.getenv("TARGET_URL"), 
         "laminar_api_key": os.getenv("LAMINAR_API_KEY", ""),
         "laminar_base_url": os.getenv("LAMINAR_BASE_URL", ""),
         "laminar_http_port": int(os.getenv("LAMINAR_HTTP_PORT", "0") or 0),
@@ -155,5 +207,5 @@ if __name__ == "__main__":
     print("===== Testing Single Task Execution =====")
     test_basic_task_execution()
     
-    # print("\n===== Testing Multiple Sequential Tasks =====")
-    # test_multiple_tasks() 
+    print("\n===== Testing Multiple Sequential Tasks =====")
+    test_multiple_tasks() 

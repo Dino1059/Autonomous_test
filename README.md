@@ -10,7 +10,7 @@
 - **REST API**: FastAPI-based endpoints with comprehensive documentation
 
 ## Playround
-See the `test_api` for examples.
+See the `test_api` for examples how to use API.
 
 ## Installation Guide
 
@@ -28,6 +28,11 @@ pip install -r requirements.txt
 
 # Install Playwright browsers
 playwright install
+```
+### Run API
+```bash
+cd app
+python main.py --port 8000
 ```
 
 ## Project Structure

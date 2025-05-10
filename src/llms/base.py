@@ -8,8 +8,11 @@ from langchain_openai import ChatOpenAI
 from langchain_google_genai import ChatGoogleGenerativeAI
 from loguru import logger
 from langchain_core.chat_history import BaseChatMessageHistory
-from langchain_core.prompts import ChatPromptTemplate, MessagesPlaceholder
+from langchain_core.prompts import ChatPromptTemplate, MessagesPlaceholder, HumanMessagePromptTemplate
 from langchain_core.runnables.history import RunnableWithMessageHistory
+import base64
+import requests
+from io import BytesIO
 
 import sys
 import os
@@ -93,14 +96,14 @@ class BaseLLMWorker:
         self.chat_prompt = ChatPromptTemplate.from_messages([
             ("system", "You are a helpful AI assistant."),
             MessagesPlaceholder(variable_name="history"),
-            ("human", "{question}")
+            ("human", "{input}"),
+            ("placeholder", "{image}")
         ])
 
         # Configure chain with history management
         self.chain = RunnableWithMessageHistory(
             self.chat_prompt | self.llm,
             self.get_session_history,
-            input_messages_key="question",
             history_messages_key="history",
         )
 
@@ -110,14 +113,46 @@ class BaseLLMWorker:
             self.store[session_id] = InMemoryHistory()
         return self.store[session_id]
 
-    def get_response(self, input_text: str, session_id: str) -> str:
-        """Get response from LLM with history management"""
+    def get_response(self, input_text: str, session_id: str, image_urls: List[str] = None) -> str:
+        """Get response from LLM with history management, potentially including multiple images."""
         try:
-            response = self.chain.invoke(
-                {"question": input_text},
-                config={"configurable": {"session_id": session_id}}
-            )
-            return response
+            if image_urls and isinstance(image_urls, list) and len(image_urls) > 0:
+                # For multimodal input, prepare a list of image content parts
+                image_content_parts = []
+                
+                # Download and convert each image to base64
+                headers = {
+                    "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36"
+                }
+                
+                for image_url in image_urls:
+                    response = requests.get(image_url, headers=headers)
+                    response.raise_for_status()
+                    image_data = response.content
+                    base64_encoded_data = base64.b64encode(image_data).decode("UTF-8")
+                    
+                    # Add this image to the content parts
+                    image_content_parts.append({
+                        "type": "image_url",
+                        "image_url": {"url": f"data:image/png;base64,{base64_encoded_data}"}
+                    })
+                
+                # Construct the content parts with all images
+                current_input_content = [
+                    ("human", image_content_parts)
+                ]
+
+                response = self.chain.invoke(
+                    {"input": input_text, "image": current_input_content},
+                    config={"configurable": {"session_id": session_id}}
+                )
+                return response.content
+            else:
+                response = self.chain.invoke(
+                   {"input": input_text},
+                   config={"configurable": {"session_id": session_id}}
+                )
+                return response.content
         except Exception as e:
             logger.error(f"Error getting LLM response: {e}")
             raise
@@ -131,38 +166,55 @@ def main():
     """Main function for testing the LLM workers."""
     base_llm_worker = BaseLLMWorker(
         provider="openrouter",
-        model="thudm/glm-z1-32b:free",
+        model="google/gemini-2.0-flash-exp:free",
         temperature=0.0,
         top_p=1.0,
         top_k=40,
         max_output_tokens=2048,
     )
-    session_id = settings["session_id"]
-
+    session_id = "test-session"
     # First message
-    try:
-        response = base_llm_worker.get_response("Hello, how are you?", session_id)
-        print("First response:", response)
+    # try:
+    #     response = base_llm_worker.get_response("Hello, how are you?", session_id)
+    #     print("First response:", response)
         
-        # Print current history
-        history = base_llm_worker.get_session_history(session_id)
-        print(history)
-        print('---------------------------------------------------------')
-    except Exception as e:
-        print(f"Failed first message: {e}")
+    #     print('---------------------------------------------------------')
+    # except Exception as e:
+    #     print(f"Failed first message: {e}")
 
-    # Second message referencing history
-    try:
-        response = base_llm_worker.get_response("What did you just say?", session_id)
-        print("Second response:", response)
+    # # Second message referencing history
+    # try:
+    #     response = base_llm_worker.get_response("What did you just say?", session_id)
+    #     print("Second response:", response)
         
-        # Print updated history
-        history = base_llm_worker.get_session_history(session_id)
-        print(history)
-        print(type(history))
+    #     print('---------------------------------------------------------')
+    # except Exception as e:
+    #     print(f"Failed second message: {e}")
+
+    # Third message with image
+    try:
+        # Test with multiple images
+        image_urls = [
+            "https://upload.wikimedia.org/wikipedia/commons/b/b6/Image_created_with_a_mobile_phone.png",
+            "https://upload.wikimedia.org/wikipedia/commons/thumb/4/47/PNG_transparency_demonstration_1.png/280px-PNG_transparency_demonstration_1.png"
+        ]
+        response = base_llm_worker.get_response(
+            "Describe both images you see. What are the main differences between them?", 
+            session_id, 
+            image_urls
+        )
+        print("Multiple images response:", response)
         print('---------------------------------------------------------')
     except Exception as e:
-        print(f"Failed second message: {e}")
+        print(f"Failed multiple images test: {e}")
+
+    # Fourth message - follow-up question
+    try:    
+        response = base_llm_worker.get_response("Which image showed a mobile phone?", session_id)
+        print("Follow-up response:", response)
+        print('---------------------------------------------------------')
+    except Exception as e:
+        print(f"Failed follow-up question: {e}") 
 
 if __name__ == "__main__":
     print(os.getenv("OPENAI_API_KEY"))

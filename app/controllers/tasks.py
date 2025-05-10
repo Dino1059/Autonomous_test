@@ -28,7 +28,6 @@ async def run_tasks_endpoint(request: RunTaskRequest, background_tasks: Backgrou
         run_tasks_background,
         task_id,
         [task.model_dump() for task in request.tasks],
-        request.target_url,
         request.laminar_api_key,
         request.laminar_base_url,
         request.laminar_http_port,
