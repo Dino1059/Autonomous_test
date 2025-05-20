@@ -26,8 +26,29 @@ This directory contains test scripts for the AutoTester API.
       "enable_memory": false,
       "memory_interval": 10,
       "initial_actions": [
-        {"open_tab": {"url": "https://example.com"}}
-      ]
+        {
+          "open_tab": {
+            "url": "https://example.com"
+          }
+        }
+      ],
+      "use_vision_for_planner": True,
+      "planner_interval": 1,
+      "is_planner_reasoning": True,
+      "planner_llm": {
+        "provider": "openai",
+        "model": "gpt-4.1",
+        "temperature": 0.0
+      },
+      "report_config": {
+        "provider": "google",
+        "model": "gemini-2.0-flash",
+        "temperature": 0.2,
+        "is_report_reasoning": False,
+        "extend_report_system_message": "Include code samples when relevant.",
+        "use_vision_for_report": False,
+        "report_folder": "E:/official_DopikAI/ai-agent-tester/tests_api/demo_simple"
+      }
     }
   ],
   "laminar_api_key": "your_laminar_api_key",
@@ -39,24 +60,36 @@ This directory contains test scripts for the AutoTester API.
   "simulator_model": "gemini-2.0-flash",
   "simulator_temperature": 0.0,
   "simulator_task": "",
-  "custom_actions": []
+  "custom_actions": [],
+  "use_own_browser": True
 }
+
 ```
 
 **Field Descriptions**:
 
 *Task Object Fields:*
-- `name` - A descriptive name for the task
-- `prompt` - Instructions for the AI agent to follow when executing the task
-- `max_steps` - Maximum number of steps the AI can take to complete the task
-- `output_model_fields` - Optional JSON schema defining the structure of the desired output
-- `exclude_actions` - Array of action types to disable for this task
-- `llm_provider` - Provider of the language model (e.g., "google", "openai")
-- `llm_model` - Specific model to use (e.g., "gemini-2.0-flash")
-- `llm_temperature` - Controls randomness of AI outputs (0.0 = deterministic)
-- `enable_memory` - Whether to enable persistent memory across steps
-- `memory_interval` - Number of steps between memory snapshots
-- `initial_actions` - Actions to perform before starting the task (e.g., opening URLs)
+| Field                    | Description                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                          |
+| ------------------------ | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `name`                   | **(String)** A descriptive name for the task.                                                                                                                                                                                                                                                                                                                                                                                                                                                                        |
+| `prompt`                 | **(String)** Instructions for the AI agent to follow when executing the task.                                                                                                                                                                                                                                                                                                                                                                                                                                        |
+| `max_steps`              | **(Integer)** Maximum number of steps the AI can take to complete the task.                                                                                                                                                                                                                                                                                                                                                                                                                                          |
+| `output_model_fields`    | **(Object)** Optional JSON schema defining the structure of the desired output.                                                                                                                                                                                                                                                                                                                                                                                                                                      |
+| `exclude_actions`        | **(Array)** Array of action types to disable for this task.                                                                                                                                                                                                                                                                                                                                                                                                                                                          |
+| `llm_provider`           | **(String)** Provider of the language model (e.g., `"google"`, `"openai"`).                                                                                                                                                                                                                                                                                                                                                                                                                                          |
+| `llm_model`              | **(String)** Specific model to use (e.g., `"gemini-2.0-flash"`).                                                                                                                                                                                                                                                                                                                                                                                                                                                     |
+| `llm_temperature`        | **(Float)** Controls randomness of AI outputs (`0.0` = deterministic).                                                                                                                                                                                                                                                                                                                                                                                                                                               |
+| `enable_memory`          | **(Boolean)** Whether to enable persistent memory across steps.                                                                                                                                                                                                                                                                                                                                                                                                                                                      |
+| `memory_interval`        | **(Integer)** Number of steps between memory snapshots.                                                                                                                                                                                                                                                                                                                                                                                                                                                              |
+| `initial_actions`        | **(Array)** Actions to perform before starting the task (e.g., opening URLs).                                                                                                                                                                                                                                                                                                                                                                                                                                        |
+| `use_vision_for_planner` | **(Boolean)** Whether the planner can use vision-based inputs like screenshots during planning.                                                                                                                                                                                                                                                                                                                                                                                                                      |
+| `planner_interval`       | **(Integer)** Frequency (in steps) at which the planner LLM is invoked (e.g., `1` = every step).                                                                                                                                                                                                                                                                                                                                                                                                                     |
+| `is_planner_reasoning`   | **(Boolean)** Enables explicit reasoning by the planner when deciding the next action.                                                                                                                                                                                                                                                                                                                                                                                                                               |
+| `planner_llm`            | **(Object)** Configuration for the planner language model:<br> • `provider`: LLM provider (e.g., `"openai"`)<br> • `model`: Planner model (e.g., `"gpt-4.1"`)<br> • `temperature`: Controls planner output randomness.                                                                                                                                                                                                                                                                                               |
+| `report_config`          | **(Object)** Configuration for the task report generation:<br> • `provider`: LLM provider for report (e.g., `"google"`)<br> • `model`: LLM used to generate the report<br> • `temperature`: Creativity of the report output<br> • `is_report_reasoning`: Whether to include reasoning in the report<br> • `extend_report_system_message`: Custom prompt to enrich report content<br> • `use_vision_for_report`: Whether to use visual inputs in the report<br> • `report_folder`: Filesystem path to save the report |
+
+
+
 
 *Top-level Fields:*
 - `tasks` - Array of task objects to be executed sequentially
@@ -70,6 +103,7 @@ This directory contains test scripts for the AutoTester API.
 - `simulator_temperature` - Temperature setting for simulator responses
 - `simulator_task` - Instructions for the user simulator (if enabled)
 - `custom_actions` - Array of custom actions available to the AI agent
+- `use_own_browser`: Use your browser with cookies and profile.
 
 **Response**:
 ```json

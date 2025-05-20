@@ -2,7 +2,7 @@
 Pydantic models for serializing request and response data
 """
 from typing import Dict, Any, List, Optional, Type, Generic, TypeVar
-from pydantic import BaseModel, Field, create_model
+from pydantic import BaseModel, Field, create_model, Extra
 
 T = TypeVar('T')
 
@@ -29,6 +29,10 @@ class TaskConfig(BaseModel):
     enable_memory: bool = Field(False, description="Whether to enable memory")
     memory_interval: int = Field(7, description="Memory interval")
     initial_actions: List[Dict[str, Any]] = Field(default_factory=list, description="Initial actions to perform")
+    
+    # Allow arbitrary additional fields through Config
+    class Config:
+        extra = "allow"  # Allow any extra attributes to be passed to Agent constructor
 
 class CustomAction(BaseModel):
     name: str = Field(..., description="Name of the action to display to the agent")
@@ -46,6 +50,7 @@ class RunTaskRequest(BaseModel):
     simulator_temperature: float = Field(..., description="User simulator temperature")
     simulator_task: str = Field("", description="User simulator task description")
     custom_actions: List[CustomAction] = Field(default_factory=list, description="Custom actions to register")
+    use_own_browser: bool = Field(False, description="Whether to use the user's own browser with user data")
 
 class RunTaskResponse(BaseModel):
     results: List[Dict[str, Any]] = Field(..., description="Task execution results")

@@ -10,7 +10,8 @@ SETTINGS = {
     "laminar_http_port": 0,
     "laminar_grpc_port": 0,
     "session_id": "",
-    "user_simulator_task": ""
+    "user_simulator_task": "",
+    "use_own_browser": False
 }
 
 # Global dictionary to store background tasks
@@ -73,4 +74,4 @@ def get_or_initialize_llm_worker(provider=None, model=None, temperature=None):
         return llm_worker
         
     # If no way to initialize, return None
-    return None 
+    return None

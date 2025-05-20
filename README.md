@@ -29,6 +29,35 @@ pip install -r requirements.txt
 # Install Playwright browsers
 playwright install
 ```
+
+## Environment Variables
+
+The application uses environment variables for configuration. Create a `.env` file in the project root with the following variables:
+
+```
+# API Keys
+OPENAI_API_KEY=your_openai_api_key
+GEMINI_API_KEY=your_gemini_api_key
+GOOGLE_API_KEY=your_google_api_key
+
+# Laminar Configuration
+LAMINAR_API_KEY=your_laminar_api_key
+LAMINAR_BASE_URL=your_laminar_base_url
+LAMINAR_HTTP_PORT=0
+LAMINAR_GRPC_PORT=0
+
+# Target URL for testing
+TARGET_URL=https://example.com
+
+# Browser Configuration
+BROWSER_BINARY_PATH=C:\Program Files\Google\Chrome\Application\chrome.exe
+USER_DATA_DIR=C:\Users\username\AppData\Local\Google\Chrome\User Data
+
+# Server Configuration
+PORT=8081
+HOST=0.0.0.0
+```
+
 ### Run API
 ```bash
 cd app

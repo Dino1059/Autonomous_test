@@ -8,22 +8,126 @@ import asyncio
 import logging
 import traceback
 import inspect
+import requests
 from typing import Dict, Any, List, Tuple, Optional
+import base64
+from pathlib import Path
+from dotenv import load_dotenv
+from inspect import signature
 
 from browser_use import Agent, Controller
-from browser_use.browser.browser import Browser
+from browser_use.browser.browser import Browser, BrowserConfig
 from browser_use.browser.context import BrowserContext
 from browser_use.agent.views import ActionResult
+from browser_use.agent.memory import MemoryConfig
 from playwright.sync_api import ElementHandle
 import pyperclip
 from src.llms.base import BaseLLMWorker
+from pyobjtojson import obj_to_json
 
 from app.utils.globals import SETTINGS, BACKGROUND_TASKS, USER_SIMULATOR_INTERACTIONS, CANCELLATION_FLAGS, get_or_initialize_llm_worker
-from app.utils.browser_actions import paste_from_clipboard, call_user_simulator, get_system_message, click_the_send_button, sanitize_response
-from app.utils.llm_utils import create_llm_for_task, create_model_from_schema
+from app.utils.browser_actions import paste_from_clipboard, call_user_simulator, get_system_message, click_the_send_button, sanitize_response, go_down_the_page
+from app.utils.llm_utils import create_llm_for_task, create_model_from_schema, generate_report
 from app.serializers.models import MetadataCampaign, TaskConfig
 
 import json_repair
+
+
+async def record_activity(agent_obj):
+    """Hook function that captures and records agent activity at each step"""
+    logger = logging.getLogger("RECORD_ACTIVITY")
+    logger.info("Recording agent activity")
+    
+    website_html = None
+    website_screenshot = None
+    urls_json_last_elem = None
+    model_thoughts_last_elem = None
+    model_outputs_json_last_elem = None
+    model_actions_json_last_elem = None
+    extracted_content_json_last_elem = None
+    
+    # Get task_id from agent_obj if available
+    task_id = "default"
+    if hasattr(agent_obj, "task_id"):
+        task_id = agent_obj.task_id
+
+    try:
+        # Capture current page state
+        website_html = await agent_obj.browser_context.get_page_html()
+        website_screenshot = await agent_obj.browser_context.take_screenshot()
+
+        # Make sure we have state history
+        if hasattr(agent_obj, "state"):
+            history = agent_obj.state.history
+        else:
+            history = None
+            logger.warning("Warning: Agent has no state history")
+            return
+
+        # Process model thoughts
+        model_thoughts = obj_to_json(
+            obj=history.model_thoughts(),
+            check_circular=False
+        )
+        if len(model_thoughts) > 0:
+            model_thoughts_last_elem = model_thoughts[-1]
+
+        # Process model outputs
+        model_outputs = agent_obj.state.history.model_outputs()
+        model_outputs_json = obj_to_json(
+            obj=model_outputs,
+            check_circular=False
+        )
+        if len(model_outputs_json) > 0:
+            model_outputs_json_last_elem = model_outputs_json[-1]
+
+        # Process model actions
+        model_actions = agent_obj.state.history.model_actions()
+        model_actions_json = obj_to_json(
+            obj=model_actions,
+            check_circular=False
+        )
+        if len(model_actions_json) > 0:
+            model_actions_json_last_elem = model_actions_json[-1]
+
+        # Process extracted content
+        extracted_content = agent_obj.state.history.extracted_content()
+        extracted_content_json = obj_to_json(
+            obj=extracted_content,
+            check_circular=False
+        )
+        if len(extracted_content_json) > 0:
+            extracted_content_json_last_elem = extracted_content_json[-1]
+
+        # Process URLs
+        urls = agent_obj.state.history.urls()
+        urls_json = obj_to_json(
+            obj=urls,
+            check_circular=False
+        )
+        if len(urls_json) > 0:
+            urls_json_last_elem = urls_json[-1]
+
+        # Create a summary of all data for this step
+        model_step_summary = {
+            "website_html": website_html,
+            "website_screenshot": website_screenshot,
+            "url": urls_json_last_elem,
+            "model_thoughts": model_thoughts_last_elem,
+            "model_outputs": model_outputs_json_last_elem,
+            "model_actions": model_actions_json_last_elem,
+            "extracted_content": extracted_content_json_last_elem
+        }
+
+        logger.info(f"Recording step for URL: {urls_json_last_elem}")
+        
+        # Send data to the recording API with task_id as query parameter
+        url = f"http://127.0.0.1:9000/post_agent_history_step?task_id={task_id}"
+        response = requests.post(url, json=model_step_summary)
+        logger.info(f"Recording API response: {response.json()}")
+    
+    except Exception as e:
+        logger.error(f"Error in record_activity: {str(e)}")
 
 
 async def run_tasks(
@@ -38,7 +142,8 @@ async def run_tasks(
     sim_temperature: float,
     simulator_task: str,
     custom_actions: List[Dict[str, str]] = [],
-    task_id: str = None
+    task_id: str = None,
+    use_own_browser: bool = False
 ) -> Tuple[List[Dict[str, Any]], List[Dict[str, Any]]]:
     """Run multiple browser automation tasks with specified settings in the same browser context"""
     
@@ -56,7 +161,8 @@ async def run_tasks(
         "user_simulator_task": simulator_task,
         "simulator_provider": sim_provider,
         "simulator_model": sim_model,
-        "simulator_temperature": sim_temperature
+        "simulator_temperature": sim_temperature,
+        "use_own_browser": use_own_browser
     })
     
     # Initialize the LLM worker with the specified provider
@@ -103,8 +209,38 @@ async def run_tasks(
                 logger.info(f"Task {task_id} was cancelled before execution. Aborting.")
                 return [{"status": "cancelled", "message": "Task cancelled before execution"}], []
                 
-        # Initialize browser
-        browser = Browser()
+        # Check if settings contain use_own_browser flag
+        use_own_browser = SETTINGS.get("use_own_browser", False)
+        logger.info(f"Using own browser: {use_own_browser}")
+        
+        # Load environment variables
+        load_dotenv()
+        
+        # Initialize browser with user's browser data if requested
+        if use_own_browser:
+            # Get browser settings from environment variables or use defaults
+            # Environment variables for browser configuration:
+            # - BROWSER_BINARY_PATH: Path to the browser executable (e.g., "C:\Program Files\Google\Chrome\Application\chrome.exe")
+            # - USER_DATA_DIR: Path to the user data directory (e.g., "C:\Users\username\AppData\Local\Google\Chrome\User Data")
+            browser_binary_path = os.getenv("BROWSER_BINARY_PATH", "C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe")
+            user_data_dir = os.getenv("USER_DATA_DIR", "C:\\Users\\user\\AppData\\Local\\Google\\Chrome\\User Data")
+            
+            # Format the extra_chromium_args with the user data directory
+            extra_chromium_args = [f"--user-data-dir='{user_data_dir}'"]
+            
+            logger.info(f"Using browser at: {browser_binary_path}")
+            logger.info(f"Using user data directory: {user_data_dir}")
+            
+            browser = Browser(
+                config=BrowserConfig(
+                    # Use environment variables for browser configuration
+                    browser_binary_path=browser_binary_path,
+                    extra_chromium_args=extra_chromium_args,
+                )
+            )
+        else:
+            browser = Browser()
+        
         async with await browser.new_context() as context:
             # Loop through tasks and execute them in the same context
             for i, task in enumerate(tasks):
@@ -141,16 +277,112 @@ async def run_tasks(
                 # Create the LLM for this specific task
                 llm = create_llm_for_task(task_config)
                 
-                # Create agent with task
-                agent = Agent(
-                    task=task_config.prompt,
-                    llm=llm,
-                    controller=controller,
-                    browser_context=context,
-                    enable_memory=task_config.enable_memory if task_config.enable_memory is not None else True,
-                    memory_interval=task_config.memory_interval if task_config.memory_interval else 10,
-                    initial_actions=task_config.initial_actions if task_config.initial_actions else None,
-                )
+                # Prepare kwargs for Agent constructor
+                kwargs = task_config.model_dump()
+                report_config = kwargs.pop("report_config", None)
+                # Remove task-specific fields that shouldn't be passed to Agent
+                fields_to_remove = ["name", "max_steps", "output_model_fields", "exclude_actions", 
+                                   "llm_provider", "llm_model", "llm_temperature", "prompt", "report_config"]
+                for field in fields_to_remove:
+                    if field in kwargs:
+                        kwargs.pop(field)
+
+                # agent_params = signature(Agent).parameters.keys()
+                # agent_kwargs = {k: v for k, v in kwargs.items() if k in agent_params}
+                
+                # Handle memory configuration
+                if "enable_memory" in kwargs and kwargs["enable_memory"]:
+                    memory_interval = kwargs.pop("memory_interval", 7)
+                    agent_id = f"agent_{task_id}" if task_id else f"agent_{i+1}"
+                    
+                    # Create MemoryConfig
+                    memory_config = MemoryConfig(
+                        agent_id=agent_id,
+                        memory_interval=memory_interval
+                    )
+                    
+                    # Replace individual memory params with memory_config
+                    kwargs.pop("enable_memory")
+                    kwargs["memory_config"] = memory_config
+                elif "enable_memory" in kwargs:
+                    # If enable_memory is False, just remove it and memory_interval
+                    kwargs.pop("enable_memory")
+                    if "memory_interval" in kwargs:
+                        kwargs.pop("memory_interval")
+                
+                # Set required parameters
+                kwargs["task"] = task_config.prompt
+                kwargs["llm"] = llm
+                kwargs["controller"] = controller
+                kwargs["browser_context"] = context
+                
+                # Debug log all parameters being passed to Agent
+                logging.getLogger("RUN_TASKS").info("Agent signature: %s", inspect.signature(Agent))
+                logging.getLogger("RUN_TASKS").info("Final kwargs keys: %r", list(kwargs.keys()))
+
+                
+                # Handle planner_llm parameter if specified
+                if "planner_llm" in kwargs:
+                    if kwargs["planner_llm"] is True:
+                        # If planner_llm is set to True, use the same LLM
+                        kwargs["planner_llm"] = llm
+                    elif isinstance(kwargs["planner_llm"], dict):
+                        # If planner_llm is a dictionary with configuration, create a new LLM instance
+                        try:
+                            from app.utils.llm_utils import create_custom_llm
+                            planner_config = kwargs["planner_llm"]
+                            # Create custom LLM for planner
+                            kwargs["planner_llm"] = create_custom_llm(
+                                provider=planner_config.get("provider", task_config.llm_provider),
+                                model=planner_config.get("model", task_config.llm_model),
+                                temperature=planner_config.get("temperature", task_config.llm_temperature)
+                            )
+                            logger.info(f"Created custom planner LLM with provider={planner_config.get('provider')}, model={planner_config.get('model')}")
+                        except Exception as e:
+                            logger.error(f"Error creating custom planner LLM: {str(e)}")
+                            # Fall back to using the main LLM
+                            kwargs["planner_llm"] = llm
+                            logger.info("Falling back to using the main LLM for planning")
+
+                if report_config:
+                    if isinstance(report_config, dict):
+                        try:
+                            from app.utils.llm_utils import create_custom_llm
+                            report_config['reporter'] = create_custom_llm(
+                                provider=report_config.get("provider", task_config.llm_provider),
+                                model=report_config.get("model", task_config.llm_model),
+                                temperature=report_config.get("temperature", task_config.llm_temperature)
+                            )
+                            logger.info(f"Created custom report LLM with provider={report_config.get('provider')}, model={report_config.get('model')}")
+                        except Exception as e:
+                            logger.error(f"Error creating custom report LLM: {str(e)}")
+                    else:
+                        raise ValueError("report_config must be a dictionary")
+                
+                try:
+                    agent = Agent(**kwargs)
+                    
+                    # Add task_id as attribute for recording hook
+                    if task_id:
+                        agent.task_id = task_id
+                    else:
+                        agent.task_id = f"task_{i+1}"
+                        
+                except TypeError as e:
+                    logger.error(f"Error creating Agent: {str(e)}")
+                    # If we get a TypeError, it might be due to unexpected parameters
+                    # Try to extract the problematic parameter name from the error message
+                    error_msg = str(e)
+                    if "got an unexpected keyword argument" in error_msg:
+                        param_name = error_msg.split("'")[-2]
+                        logger.error(f"Removing unsupported parameter: {param_name}")
+                        if param_name in kwargs:
+                            kwargs.pop(param_name)
+                            # Try again with the problematic parameter removed
+                            agent = Agent(**kwargs)
+                    else:
+                        # Re-raise if it's not a parameter issue or couldn't be fixed
+                        raise
                 
                 # Define a cancellation check callback
                 async def check_cancellation():
@@ -165,7 +397,10 @@ async def run_tasks(
                 # Run agent
                 try:
                     # Create task for agent run so we can monitor cancellation separately
-                    agent_run_task = asyncio.create_task(agent.run(max_steps=task_config.max_steps))
+                    agent_run_task = asyncio.create_task(agent.run(
+                        max_steps=task_config.max_steps,
+                        on_step_start=record_activity  # Add recording hook
+                    ))
                     
                     # Monitor the agent task and check for cancellation
                     while not agent_run_task.done():
@@ -189,7 +424,13 @@ async def run_tasks(
                     
                     # Get the result if task completed successfully
                     history = await agent_run_task
-                    
+                    # Update report_config with the correct state (history)
+                    report_config['state'] = agent.state
+                    ## report generation
+                    await generate_report(
+                        task=task_config.prompt,
+                        **report_config
+                    )
                     # Get results
                     final_result = history.final_result()
                     final_result = json_repair.loads(final_result)
@@ -218,7 +459,8 @@ async def run_tasks(
                     # Add to results
                     all_results.append({
                         "task_name": task_config.name,
-                        "result": final_result
+                        "result": final_result,
+                        "report_folder": report_config['report_folder']
                     })
                     
                     all_history.append({
@@ -246,7 +488,7 @@ async def run_tasks(
     except Exception as e:
         traceback_str = traceback.format_exc()
         logger.error(f"Error in run_tasks: {traceback_str}")
-        return [{"error": str(e), "traceback": traceback_str}], []
+        return [{"error": str(e), "traceback": traceback_str, "agent_parameters": ', '.join(kwargs.keys())}], []
     finally:
         # Clean up cancellation flag if task is complete
         if task_id and task_id in CANCELLATION_FLAGS:
@@ -262,6 +504,7 @@ def register_controller_actions(controller):
     registry.action('Call user simulator')(call_user_simulator)
     registry.action("Extract the system's message")(get_system_message)
     registry.action("Click the send button")(click_the_send_button)
+    registry.action("Scroll down the page")(go_down_the_page)
 
 def register_custom_action(controller, action_config):
     """Register a custom action from the API"""
@@ -324,7 +567,8 @@ async def run_tasks_background(
     simulator_model: str,
     simulator_temperature: float,
     simulator_task: str,
-    custom_actions: List[Dict[str, str]]
+    custom_actions: List[Dict[str, str]],
+    use_own_browser: bool = False
 ):
     """Run tasks in the background and store the results"""
     try:
@@ -344,9 +588,10 @@ async def run_tasks_background(
             simulator_provider,
             simulator_model,
             simulator_temperature,
-            simulator_task,
-            custom_actions,
-            task_id  # Pass task_id to run_tasks for cancellation check
+                          simulator_task,
+              custom_actions,
+              task_id,  # Pass task_id to run_tasks for cancellation check
+              use_own_browser  # Pass use_own_browser flag
         )
         
         # Check if task was cancelled from results

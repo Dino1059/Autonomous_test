@@ -8,6 +8,11 @@ from langchain_google_genai import ChatGoogleGenerativeAI
 from pydantic import BaseModel, create_model, Field
 from app.serializers.models import TaskConfig
 from typing import Dict, Any, Type, List as TypingList, Union
+from datetime import datetime
+import logging
+from app.utils.prompts import ReportPrompt
+import json
+from langchain_core.messages import HumanMessage
 
 def create_llm_for_task(task_config: TaskConfig):
     """Create an LLM instance based on task configuration"""
@@ -15,6 +20,10 @@ def create_llm_for_task(task_config: TaskConfig):
     model = task_config.llm_model
     temperature = task_config.llm_temperature
     
+    return create_custom_llm(provider, model, temperature)
+
+def create_custom_llm(provider: str, model: str, temperature: float):
+    """Create a custom LLM instance with specified provider, model and temperature"""
     if provider == "google":
         return ChatGoogleGenerativeAI(
             model=model,
@@ -27,14 +36,14 @@ def create_llm_for_task(task_config: TaskConfig):
     elif provider == "openai":
         return ChatOpenAI(
             model=model,
-            temperature=temperature,
+            #temperature=temperature,
             openai_api_key=os.getenv('OPENAI_API_KEY')
         )
     elif provider == "openrouter":
         return ChatOpenAI(
             model=model,
             temperature=temperature,
-            api_key=os.getenv('OPENAI_API_KEY'),
+            api_key=os.getenv('OPENROUTER_API_KEY'),
             base_url="https://openrouter.ai/api/v1"
         )
     else:
@@ -167,3 +176,153 @@ def create_model_from_schema(
     }
 
     return DynamicModel
+
+async def generate_report(
+    task: str,
+    **kwargs
+) -> None:
+    """
+    Generate a markdown report summarizing the agent's execution and save it to a file.
+
+    Args:
+        task (str): The task description.
+        reporter (LangchainModel): The reporter model.
+        report_folder (str): The folder to save the report.
+        state (State): The state of the agent.
+        is_report_reasoning (bool): Whether to include reasoning in the report.
+        extend_report_system_message (str): An optional system message to extend the report.
+        use_vision_for_report (bool): Whether to use vision for the report.
+    """
+    logger = logging.getLogger(__name__)
+    
+    # Ensure report directory exists
+    os.makedirs(kwargs['report_folder'], exist_ok=True)
+    
+    # Generate timestamp once and reuse
+    timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+    report_filename = f"report_{timestamp}.md"
+    report_path = os.path.join(kwargs['report_folder'], report_filename)
+    
+    logger.info(f"Generating report at: {report_path}")
+
+    # Pre-collect data from history to avoid multiple iterations
+    history_data = {
+        "urls": kwargs['state'].history.urls(),
+        "screenshots": kwargs['state'].history.screenshots(),
+        "errors": kwargs['state'].history.errors(),
+        "is_successful": kwargs['state'].history.is_successful(),
+        "final_result": kwargs['state'].history.final_result(),
+        "total_input_tokens": kwargs['state'].history.total_input_tokens(),
+        "total_duration": kwargs['state'].history.total_duration_seconds()
+    }
+    
+    # Build history summary using a list for better performance
+    history_summary = [
+        f"# Task: {task}",
+        f"- Steps completed: {kwargs['state'].n_steps}",
+        f"- Success: {history_data['is_successful']}",
+        f"- Final Result: {json.dumps(history_data['final_result'], indent=2)}",
+        f"- Tokens used (approx.): {history_data['total_input_tokens']}",
+        f"- Duration: {history_data['total_duration']} seconds",
+        "\n## URLs Visited:"
+    ]
+    
+    # Add URLs
+    history_summary.extend([f"- {url}" for url in history_data["urls"]])
+    
+    # Add execution steps
+    history_summary.append("\n## Execution Steps:")
+    for i, history_item in enumerate(kwargs['state'].history.history):
+        history_summary.append(f"\n### Step {i + 1}:")
+        
+        # Add state info if available
+        if history_item.state:
+            history_summary.append(f"- URL: {history_item.state.url}")
+            history_summary.append(f"- Title: {history_item.state.title}")
+        
+        # Add actions if available
+        if history_item.model_output and history_item.model_output.action:
+            history_summary.append("\n#### Actions:")
+            actions = [
+                f"- Action {j + 1}: `{json.dumps(action.model_dump(exclude_unset=True))}`" 
+                for j, action in enumerate(history_item.model_output.action)
+            ]
+            history_summary.extend(actions)
+        
+        # Add results if available
+        if history_item.result:
+            history_summary.append("\n#### Results:")
+            for j, result in enumerate(history_item.result):
+                if result.extracted_content:
+                    history_summary.append(f"- Result {j + 1}: {result.extracted_content}")
+                if result.error:
+                    history_summary.append(f"- Error {j + 1}: {result.error}")
+        
+        # Add metadata if available
+        if history_item.metadata:
+            duration = history_item.metadata.step_end_time - history_item.metadata.step_start_time
+            history_summary.append("\n#### Metadata:")
+            history_summary.append(f"- Duration: {duration:.2f} seconds")
+            history_summary.append(f"- Input tokens: {history_item.metadata.input_tokens}")
+    
+    # Add errors if any
+    if history_data["errors"]:
+        history_summary.append("\n## Errors Encountered:")
+        history_summary.extend([f"- {error}" for error in history_data["errors"] if error])
+    
+    # Join all lines into a single string
+    summary_text = "\n".join(history_summary)
+    
+    # Save plain history summary
+    history_path = os.path.join(kwargs['report_folder'], f"history_summary_{timestamp}.txt")
+    try:
+        with open(history_path, "w", encoding="utf-8") as f:
+            f.write(summary_text)
+    except Exception as e:
+        logger.error(f"Failed to write history summary: {str(e)}")
+    
+    # Create the report messages
+    report_messages = [
+        ReportPrompt(task=task).get_system_message(
+            is_report_reasoning=kwargs['is_report_reasoning'],
+            extend_report_system_message=kwargs['extend_report_system_message'],
+        )
+    ]
+    
+    # Handle message content with or without screenshots
+    message_content = summary_text
+    if kwargs['use_vision_for_report'] and history_data["screenshots"]:
+        # Find the last valid screenshot
+        last_screenshot = next((s for s in reversed(history_data["screenshots"]) if s), None)
+        if last_screenshot:
+            message_content = [
+                {'type': 'text', 'text': summary_text},
+                {
+                    'type': 'image_url',
+                    'image_url': {'url': f'data:image/png;base64,{last_screenshot}'},
+                },
+            ]
+    
+    report_messages.append(HumanMessage(content=message_content))
+    
+    try:
+        # Generate report using LLM
+        response = await kwargs['reporter'].ainvoke(report_messages)
+        report_content = str(response.content)
+        
+        # Clean up report content
+        report_content = (report_content
+                          .replace("<start_of_report>", "")
+                          .replace("<end_of_report>", "")
+                          .strip())
+        
+        # Write report to file
+        with open(report_path, "w", encoding="utf-8") as f:
+            f.write(report_content)
+        
+        logger.info(f"Report generated successfully at: {report_path}")
+        
+    except Exception as e:
+        logger.error(f"Failed to generate report: {str(e)}")
+        # Re-raise with contextual information
+        raise Exception(f"Failed to generate report: {str(e)}") from e

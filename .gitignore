@@ -180,3 +180,8 @@ webui/
 
 # Ignore TODO.md file
 TODO.md
+
+.cursorignore
+
+reports
+app/recordings/

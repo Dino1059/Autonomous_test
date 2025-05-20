@@ -24,6 +24,42 @@ def sanitize_response(text: str) -> str:
     sanitized = sanitized.replace('\n', '<line_break>')
     return sanitized
 
+##work only for streamlit
+async def go_down_the_page(temp_params: str, browser: BrowserContext):
+    """Scroll down the page"""
+    logger = logging.getLogger("GO DOWN THE PAGE")
+    logger.info("Scrolling down the page")
+    try:
+        page = await browser.get_current_page()
+        # For Playwright
+        await page.evaluate("""
+(() => {
+    // Target the main Streamlit content container
+    const mainContainer = document.querySelector('.stAppViewContainer');
+    if (mainContainer) {
+        mainContainer.scrollTo({
+            top: 5000,
+            behavior: 'smooth'
+        });
+    } else {
+        // Fallback to main block container
+        const blockContainer = document.querySelector('.stMainBlockContainer');
+        if (blockContainer) {
+            blockContainer.scrollTo({
+                top: 5000,
+                behavior: 'smooth'
+            });
+        }
+    }
+})()
+""")
+
+        return ActionResult(extracted_content="Done scrolling down the page.", include_in_memory=True)
+    except Exception as e:
+        logger.error(f"Error scrolling down the page: {str(e)}")
+        return ActionResult(extracted_content=f"Failed to scroll down the page: {str(e)}", include_in_memory=True)
+
+
 async def paste_from_clipboard(temp_params: str, browser: BrowserContext):
     """Paste text from clipboard to current input"""
     raw_text = pyperclip.paste()
@@ -35,9 +71,10 @@ async def paste_from_clipboard(temp_params: str, browser: BrowserContext):
 
     logger = logging.getLogger("PASTE FROM CLIPBOARD")
     logger.info(f"Pasted: {clean_text}")
-
+    ## implement go down the page
+    await go_down_the_page(temp_params, browser)
     return ActionResult(
-        extracted_content="Done pasting to input box",
+        extracted_content="Done pasting to input box. Please call `click_the_send_button` action to send the message.",
         include_in_memory=True
     )
 
@@ -86,7 +123,7 @@ async def call_user_simulator(temp_params: str) -> ActionResult:
         # Build the base prompt (fixed part)
         base_prompt = "You are a test user interacting with a marketing assistant. "
         base_prompt += "Your goal is to simulate realistic user responses to test the system. "
-        base_prompt += "PLease always respond in JSON format. {{'response': '....', 'feedback': '....'}}"
+        #base_prompt += "PLease always respond in JSON format. {{'response': '....', 'feedback': '....'}}. But for the last response, please add a 'grade' field . The grade should be a number between 0 and 100."
         base_prompt += "Because you are testing the system, you need give the feedback at each step."
         
         # Add the flexible part if available
@@ -142,7 +179,8 @@ async def call_user_simulator(temp_params: str) -> ActionResult:
             "system_message": sanitize_response(system_message),
             "image_url": image_urls,
             "user_response": clean_response,
-            "feedback": sanitize_response(json_tester_response.get('feedback', ''))
+            "feedback": sanitize_response(json_tester_response.get('feedback', '')),
+            "grade": json_tester_response.get('grade', None)
         }
         USER_SIMULATOR_INTERACTIONS[session_id].append(interaction)
         
@@ -153,9 +191,9 @@ async def call_user_simulator(temp_params: str) -> ActionResult:
     # Step 4: Avoid re-copying same content to clipboard
     if pyperclip.paste().strip() != clean_response:
         pyperclip.copy(clean_response)
-
+    ## Trick call `go_down_the_page` action
     return ActionResult(
-        extracted_content="Done calling user simulator",
+        extracted_content="Done calling user simulator. Please call the `click_element_by_index` and `paste_from_clipboard` actions.",
         include_in_memory=True
     )
 
@@ -166,6 +204,9 @@ async def get_system_message(temp_params: str, browser: BrowserContext):
     from langchain_core.prompts import PromptTemplate
     from langchain_core.output_parsers import JsonOutputParser
     from app.serializers.models import BaseModel
+
+    page = await browser.get_current_page()
+    await page.evaluate("window.scrollBy(0, 5000);")
     
     class SystemMessage(BaseModel):
         system_message: str = Field(description="system message")
@@ -225,7 +266,7 @@ async def get_system_message(temp_params: str, browser: BrowserContext):
         pyperclip.copy(msg)
         logger.info(msg)
         return ActionResult(
-            extracted_content="Done extracting system message", 
+            extracted_content="Done extracting system message. Please call `call_user_simulator` action.", 
             include_in_memory=True
         )
     except Exception as e:
@@ -250,10 +291,11 @@ async def click_the_send_button(temp_params: str, browser: BrowserContext):
     try:
         # Click the button directly
         await element_handle.click()
-        msg = '🖱️  Clicked the send button'
+        msg = '🖱️  Clicked the send button. Please call `wait` action to wait for the response.'
         logger.info(msg)
 
         return ActionResult(extracted_content=msg, include_in_memory=True)
     except Exception as e:
         logger.warning('Failed to click the send button', exc_info=True)
         return ActionResult(error=str(e)) 
+
