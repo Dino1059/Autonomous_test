@@ -20,7 +20,5 @@
     {"action": "scroll", "description": "Scroll the page up or down"},
     {"action": "paste_from_clipboard", "description": "Paste content from clipboard"},
     {"action": "call_user_simulator", "description": "Call the user simulator for interaction"},
-    {"action": "get_system_message", "description": "Get a system message"},
-    {"action": "click_the_send_button", "description": "Click the send button on a form"},
-    {"action": "go_down_the_page", "description": "Scroll down the page"}
+    {"action": "get_system_message", "description": "Get a system message"}
 ]

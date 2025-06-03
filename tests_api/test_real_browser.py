@@ -12,7 +12,7 @@ def test_custom_output_model():
     output_model_fields = {
         "type": "object",
         "properties": {
-          "response": {
+          "list_features": {
             "type": "array",
             "items": {
               "type": "object",
@@ -20,7 +20,13 @@ def test_custom_output_model():
                 "title": {
                   "type": "string"
                 },
-                "url": {
+                "description": {
+                  "type": "string"
+                },
+                "status": {
+                  "type": "string"
+                },
+                "reason": {
                   "type": "string"
                 }
               }
@@ -34,7 +40,7 @@ def test_custom_output_model():
         "tasks": [
             {
                 "name": "Test Custom Output Model",
-                "prompt": "Go to google and search for UIT, then extract the main title and url of first three results.",
+                "prompt": "List all the features of the product. Each feature should have a title and a description, status(working or not working) and reason. You also should go for each feature and test it. If it is not working, you should say it is not working and give a reason.",
                 "max_steps": 30,
                 "output_model_fields": output_model_fields,
                 "exclude_actions": [],
@@ -44,7 +50,7 @@ def test_custom_output_model():
                 "enable_memory": True,
                 "memory_interval": 10,
                 "initial_actions": [
-                    {"open_tab": {"url": "https://www.google.com"}}
+                    {"open_tab": {"url": "https://developer-devnet.eragon.gg/dashboard"}}
                 ],
                 # Custom parameters that will be passed directly to Agent:
                 "use_vision_for_planner": True,  # Example of custom param
@@ -66,7 +72,8 @@ def test_custom_output_model():
         "simulator_model": "gemini-2.0-flash",
         "simulator_temperature": 0.0,
         "simulator_task": "dsdsadsa",
-        "custom_actions": []
+        "custom_actions": [],
+        "use_own_browser": True
     }
 
     # Make API request

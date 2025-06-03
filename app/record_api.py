@@ -90,5 +90,5 @@ async def post_agent_history_step(request: Request):
     }
 
 if __name__ == "__main__":
-    print("Starting Browser-Use recording API on http://0.0.0.0:9000")
-    uvicorn.run(app, host="0.0.0.0", port=9000)
+    print("Starting Browser-Use recording API on http://0.0.0.0:9091")
+    uvicorn.run(app, host="0.0.0.0", port=9091)

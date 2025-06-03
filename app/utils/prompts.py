@@ -7,6 +7,8 @@ import json
 from langchain_core.messages import HumanMessage, SystemMessage
 
 
+
+
 class ReportPrompt:
 	def __init__(self, task: str):
 		self.task = task

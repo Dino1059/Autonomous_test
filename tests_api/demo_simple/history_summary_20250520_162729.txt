@@ -1,0 +1,397 @@
+# Task: Go to google and search for UIT, then extract the main title and url of first three results.
+- Steps completed: 5
+- Success: True
+- Final Result: "{\"response\": [{\"title\": \"UIT: Tr\\u01b0\\u1eddng \\u0110\\u1ea1i h\\u1ecdc C\\u00f4ng ngh\\u1ec7 Th\\u00f4ng tin\", \"url\": \"https://www.uit.edu.vn\"}, {\"title\": \"Tr\\u01b0\\u1eddng \\u0110\\u1ea1i h\\u1ecdc C\\u00f4ng ngh\\u1ec7 Th\\u00f4ng tin - \\u0110\\u1ea1i h\\u1ecdc Qu\\u1ed1c gia ...\", \"url\": \"https://www.facebook.com/UIT.Fanpage/\"}, {\"title\": \"Tr\\u01b0\\u1eddng \\u0110\\u1ea1i h\\u1ecdc C\\u00f4ng ngh\\u1ec7 Th\\u00f4ng tin, \\u0110\\u1ea1i h\\u1ecdc Qu\\u1ed1c gia ...\", \"url\": \"https://vi.wikipedia.org/wiki/Tr%C6%B0%E1%BB%9Dng_%C4%90%E1%BA%A1i_h%E1%BB%8Dc_C%C3%B4ng_ngh%E1%BB%87_Th%C3%B4ng_tin\"}]}"
+- Tokens used (approx.): 19178
+- Duration: 26.12864089012146 seconds
+
+## URLs Visited:
+- https://www.google.com/
+- https://www.google.com/
+- https://www.google.com/search?q=UIT&sca_esv=58e4cc442e33908f&source=hp&ei=20osaKmAMu-XwcsP6NylmAE&iflsig=ACkRmUkAAAAAaCxY6yF1u28rrmbpD_Z7oOSB4bwLQyjb&ved=0ahUKEwjp2YLK3bGNAxXvS3ADHWhuCRMQ4dUDCA0&oq=UIT&gs_lp=Egdnd3Mtd2l6IgNVSVQyCxAuGIAEGLEDGIMBMgUQABiABDIFEAAYgAQyBRAAGIAEMgUQABiABDIFEAAYgAQyBRAAGIAEMgUQABiABDIFEAAYgAQyBRAAGIAESKBAUKMBWKMBcAF4AJABAJgBRaABRaoBATG4AQzIAQD4AQGYAgKgAlqoAgrCAgoQABgDGOoCGI8BwgIKEC4YAxjqAhiPAZgDDvEF0wLmZfTnIhqSBwEyoAe_B7IHATG4B0w&sclient=gws-wiz&sei=7UosaKLABaj04-EP-ozkmQU
+- https://www.google.com/search?q=UIT&sca_esv=58e4cc442e33908f&source=hp&ei=20osaKmAMu-XwcsP6NylmAE&iflsig=ACkRmUkAAAAAaCxY6yF1u28rrmbpD_Z7oOSB4bwLQyjb&ved=0ahUKEwjp2YLK3bGNAxXvS3ADHWhuCRMQ4dUDCA0&oq=UIT&gs_lp=Egdnd3Mtd2l6IgNVSVQyCxAuGIAEGLEDGIMBMgUQABiABDIFEAAYgAQyBRAAGIAEMgUQABiABDIFEAAYgAQyBRAAGIAEMgUQABiABDIFEAAYgAQyBRAAGIAESKBAUKMBWKMBcAF4AJABAJgBRaABRaoBATG4AQzIAQD4AQGYAgKgAlqoAgrCAgoQABgDGOoCGI8BwgIKEC4YAxjqAhiPAZgDDvEF0wLmZfTnIhqSBwEyoAe_B7IHATG4B0w&sclient=gws-wiz&sei=7UosaKLABaj04-EP-ozkmQU
+
+## Execution Steps:
+
+### Step 1:
+- URL: https://www.google.com/
+- Title: Google
+
+#### Actions:
+- Action 1: `{"input_text": {"index": 4, "text": "UIT"}}`
+- Action 2: `{"click_element_by_index": {"index": 8}}`
+
+#### Results:
+- Result 1: ⌨️  Input UIT into index 4
+- Result 2: Element index changed after action 1 / 2, because page changed.
+
+#### Metadata:
+- Duration: 6.84 seconds
+- Input tokens: 3585
+
+### Step 2:
+- URL: https://www.google.com/
+- Title: Google
+
+#### Actions:
+- Action 1: `{"click_element_by_index": {"index": 19}}`
+
+#### Results:
+- Result 1: 🖱️  Clicked button with index 19: 
+
+#### Metadata:
+- Duration: 5.20 seconds
+- Input tokens: 4035
+
+### Step 3:
+- URL: https://www.google.com/search?q=UIT&sca_esv=58e4cc442e33908f&source=hp&ei=20osaKmAMu-XwcsP6NylmAE&iflsig=ACkRmUkAAAAAaCxY6yF1u28rrmbpD_Z7oOSB4bwLQyjb&ved=0ahUKEwjp2YLK3bGNAxXvS3ADHWhuCRMQ4dUDCA0&oq=UIT&gs_lp=Egdnd3Mtd2l6IgNVSVQyCxAuGIAEGLEDGIMBMgUQABiABDIFEAAYgAQyBRAAGIAEMgUQABiABDIFEAAYgAQyBRAAGIAEMgUQABiABDIFEAAYgAQyBRAAGIAESKBAUKMBWKMBcAF4AJABAJgBRaABRaoBATG4AQzIAQD4AQGYAgKgAlqoAgrCAgoQABgDGOoCGI8BwgIKEC4YAxjqAhiPAZgDDvEF0wLmZfTnIhqSBwEyoAe_B7IHATG4B0w&sclient=gws-wiz&sei=7UosaKLABaj04-EP-ozkmQU
+- Title: UIT - Tìm trên Google
+
+#### Actions:
+- Action 1: `{"extract_content": {"goal": "Extract the main title and url of first three results.", "should_strip_link_urls": true}}`
+
+#### Results:
+- Result 1: 📄  Extracted from page
+: UIT - Tìm trên Google 
+
+Xin vui lòng nhấn vào đây nếu bạn không được chuyển đi trong vòng vài giây.
+
+Liên kết hỗ trợ truy cập
+========================
+
+Bỏ qua để đến phần nội dung chínhHỗ trợ truy cập
+
+Phản hồi về hỗ trợ truy cập
+
+Nhấn / để chuyển tới hộp tìm kiếm
+
+UIT
+
+Chọn vấn đề mà bạn muốn gửi ý kiến phản hồi
+
+- Xoá
+- ---
+
+  Xem thêm
+- Xoá
+
+---
+
+Xem thêm
+
+Báo cáo các gợi ý không phù hợp
+
+Cài đặt nhanh
+
+Đăng nhập
+
+Bộ lọc và chủ đề
+================
+
+Tất cả
+
+Hình ảnh
+
+Tin tức
+
+Video
+
+Mua sắm
+
+Video ngắn
+
+Web
+
+Thêm
+
+Sách
+
+Chuyến bay
+
+Tài chính
+
+Công cụ
+
+Mọi ngôn ngữ
+
+Mọi ngôn ngữ
+
+Tìm những trang Tiếng Việt
+
+Mọi lúc
+
+Mọi lúc
+
+Giờ qua
+
+24 giờ qua
+
+Tuần qua
+
+Tháng qua
+
+Năm qua
+
+Phạm vi tùy chỉnh...
+
+Phạm vi ngày tùy chỉnh
+
+TừTới
+
+Tìm
+
+Tất cả kết quả
+
+Tất cả kết quả
+
+Nguyên văn
+
+ 
+
+Tìm kiếm nâng cao
+
+Khoảng 1.120.000.000 kết quả (0,32 giây)
+
+Ctrl+Shift+X để chọn
+
+Looking for results in English?
+
+Change to English  
+Tiếp tục sử dụng Tiếng Việt  
+
+Cài đặt ngôn ngữ
+
+Kết quả tìm kiếm
+================
+
+Kết quả trang web kèm đường liên kết của trang web
+--------------------------------------------------
+
+### UIT: Trường Đại học Công nghệ Thông tin
+
+  
+
+Trường Đại học Công nghệ Thông tin - UIT
+
+https://www.uit.edu.vn
+
+Trường Đại học Công nghệ Thông tin - UIT
+
+https://www.uit.edu.vn
+
+- Trường Đại học Công nghệ Thông tin là một trung tâm đào tạo đại học, sau đại học cung cấp nguồn nhân lực chất lượng cao, nhằm đáp ứng nhu cầu của thị trường ...
+
+|  |
+| --- |
+| Điểm chuẩn của trường ĐH ...   Điểm chuẩn trường Đại học Công nghệ Thông tin qua các năm ... |
+| Tuyển sinh   Trường Đại học Công nghệ Thông tin, ĐHQG-HCM (UIT) luôn ... |
+| Ngành đào tạo   UIT. Khu phố 6, P. Linh Trung, Tp. Thủ Đức Tp. Hồ Chí Minh ... |
+| [2025] Dự kiến phương thức ...   [2025] Dự kiến phương thức tuyển sinh năm 2025 ... · Và có điểm ... |
+| Cổng thông tin đào tạo   Phòng A120, Trường Đại học Công nghệ Thông tin. Khu phố ... |
+| Các kết quả khác từ uit.edu.vn » | |
+
+### Trường Đại học Công nghệ Thông tin - Đại học Quốc gia ...
+
+  
+
+Facebook · Trường Đại học Công nghệ Thông tin - Đại học Quốc gia TP.HCM
+
+>100,8 N người theo dõi
+
+Facebook · Trường Đại học Công nghệ Thông tin - Đại học Quốc gia TP.HCM
+
+>100,8 N người theo dõi
+
+Ngày hội Sinh viên và Doanh nghiệp (*UIT* Job Fair) là một hoạt động thường niên của Trường ĐH Công nghệ Thông tin ĐHQG-HCM đang diễn ra tại *UIT*.
+
+Kết quả địa điểm trong vùng
+---------------------------
+
+Địa điểm
+
+### Bản đồ
+
+Đang tải...
+
+Đang tải...
+
+Mở trong Maps
+
+Dữ liệu bản đồ ©2025 GoogleĐiều khoản
+
+Không thể cập nhật vị trí của bạnTìm hiểu thêm
+
+Đang cập nhật vị trí...
+
+Trường Đại học Công nghệ Thông tin - ĐHQG TP.HCM
+
+4,7(831) · Trường đại học
+
+Hàn Thuyên · 028 3725 2002
+
+Sắp đóng ⋅ 16:30
+
+Trang web
+
+Chỉ đường
+
+UIT - Cổng A
+
+4,5(8) · Đại học công lập
+
+VRC2+2MP
+
+Chỉ đường
+
+### Trường Đại học Công nghệ Thông tin, Đại học Quốc gia ...
+
+  
+
+Wikipedia
+
+https://vi.wikipedia.org › wiki › Trường\_Đại\_học\_Côn...
+
+Wikipedia
+
+https://vi.wikipedia.org › wiki › Trường\_Đại\_học\_Côn...
+
+*Trường Đại học Công nghệ Thông tin* (tiếng Anh: University of Information Technology – UIT) là một trung tâm hàng đầu về nghiên cứu khoa học và chuyển giao ...
+
+### Điểm chuẩn Đại học Công nghệ Thông tin TP HCM tăng
+
+  
+
+VnExpress
+
+https://vnexpress.net › Giáo dục › Tuyển sinh › Đại học
+
+VnExpress
+
+https://vnexpress.net › Giáo dục › Tuyển sinh › Đại học
+
+18 thg 8, 2024 — Điểm chuẩn trường Đại học Công nghệ Thông tin TP HCM (*UIT*) từ 25,55 đến 28,3, tăng khoảng 0,5-1 điểm so với năm ngoái. - VnExpress.
+
+### Trang cá nhân của Trường Đại học Công nghệ Thông tin
+
+  
+
+Facebook · Trường Đại học Công nghệ Thông tin - Đại học Quốc gia TP.HCM
+
+>98,7 N người theo dõi
+
+Facebook · Trường Đại học Công nghệ Thông tin - Đại học Quốc gia TP.HCM
+
+>98,7 N người theo dõi
+
+*Trường Đại học Công nghệ Thông tin - Đại học Quốc gia TP.HCM*, Thành phố Hồ Chí Minh. 78.655 lượt thích · 2.937 người đang nói về điều này · 10.672 lượt...
+
+### Trường Đại học Công nghệ Thông tin - UIT
+
+  
+
+YouTube
+
+https://www.youtube.com › user › uitvietnam › playlists
+
+YouTube
+
+https://www.youtube.com › user › uitvietnam › playlists
+
+*Trường Đại học Công nghệ Thông tin - UIT* · CS214 - Biểu diễn tri thức và suy luận · MA003 - Đại số tuyến tính · Tân Sinh Viên · VNU HCM · OEP · UIT\_News · Tư vấn tuyển ...
+
+### Trường Đại học Công nghệ Thông tin - UIT
+
+  
+
+YouTube · Trường Đại học Công nghệ Thông tin - UIT
+
+>2,8 N người theo dõi
+
+YouTube · Trường Đại học Công nghệ Thông tin - UIT
+
+>2,8 N người theo dõi
+
+Chào Tân Sinh Viên *UIT* 2024-2025 · *UIT* KẾT NỐI 2022: DỊCH VỤ TRẢI NGHIỆM SINH VIÊN TẠI *UIT* · *UIT* KẾT NỐI 2022: CHƯƠNG TRÌNH TÀI NĂNG - BỨT PHÁ ĐỂ DẪN ĐẦU.
+
+Mọi người cũng tìm kiếm
+
+Trường Đại học Khoa học Tự nhiê...
+
+Trường Đại học Bách khoa ‑ Đại...
+
+Đại học Quốc gia Thành phố Hồ Chí...
+
+Trường Đại học Kinh tế ‑ Luật, ĐHQ...
+
+Trường Đại học Công nghiệp TP...
+
+Đại học Kinh tế TP.HCM (UEH) ‑ Cơ...
+
+Ý kiến phản hồi
+
+UIT **điểm chuẩn**
+
+Uit **ở đầu**
+
+**ĐRL** UIT
+
+Uit **la trường gì**
+
+UIT **- Forum**
+
+**U.I.t công thức**
+
+**Student** UIT
+
+**đại học công nghệ thông tin – đại học quốc gia tp.hcm điểm chuẩn**
+
+Điều hướng trang
+================
+
+|  |  |  |  |  |  |  |  |  |  |  |  |
+| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
+|  | 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9 | 10 | Tiếp |
+
+Đường liên kết ở chân trang
+===========================
+
+Việt Nam
+
+Mỹ Phước, Thành phố Bến Cát, Bình Dương
+
+- Dựa trên địa chỉ IP của bạn
+
+ - 
+
+Cập nhật vị trí
+
+Không thể cập nhật vị trí của bạnTìm hiểu thêm
+
+Đang cập nhật vị trí...
+
+Trợ giúpGửi phản hồiQuyền riêng tưĐiều khoản
+
+  
+
+Các ứng dụng của Google
+
+
+#### Metadata:
+- Duration: 8.03 seconds
+- Input tokens: 4754
+
+### Step 4:
+- URL: https://www.google.com/search?q=UIT&sca_esv=58e4cc442e33908f&source=hp&ei=20osaKmAMu-XwcsP6NylmAE&iflsig=ACkRmUkAAAAAaCxY6yF1u28rrmbpD_Z7oOSB4bwLQyjb&ved=0ahUKEwjp2YLK3bGNAxXvS3ADHWhuCRMQ4dUDCA0&oq=UIT&gs_lp=Egdnd3Mtd2l6IgNVSVQyCxAuGIAEGLEDGIMBMgUQABiABDIFEAAYgAQyBRAAGIAEMgUQABiABDIFEAAYgAQyBRAAGIAEMgUQABiABDIFEAAYgAQyBRAAGIAESKBAUKMBWKMBcAF4AJABAJgBRaABRaoBATG4AQzIAQD4AQGYAgKgAlqoAgrCAgoQABgDGOoCGI8BwgIKEC4YAxjqAhiPAZgDDvEF0wLmZfTnIhqSBwEyoAe_B7IHATG4B0w&sclient=gws-wiz&sei=7UosaKLABaj04-EP-ozkmQU
+- Title: UIT - Tìm trên Google
+
+#### Actions:
+- Action 1: `{"done": {"success": true, "data": {"response": [{"title": "UIT: Tr\u01b0\u1eddng \u0110\u1ea1i h\u1ecdc C\u00f4ng ngh\u1ec7 Th\u00f4ng tin", "url": "https://www.uit.edu.vn"}, {"title": "Tr\u01b0\u1eddng \u0110\u1ea1i h\u1ecdc C\u00f4ng ngh\u1ec7 Th\u00f4ng tin - \u0110\u1ea1i h\u1ecdc Qu\u1ed1c gia ...", "url": "https://www.facebook.com/UIT.Fanpage/"}, {"title": "Tr\u01b0\u1eddng \u0110\u1ea1i h\u1ecdc C\u00f4ng ngh\u1ec7 Th\u00f4ng tin, \u0110\u1ea1i h\u1ecdc Qu\u1ed1c gia ...", "url": "https://vi.wikipedia.org/wiki/Tr%C6%B0%E1%BB%9Dng_%C4%90%E1%BA%A1i_h%E1%BB%8Dc_C%C3%B4ng_ngh%E1%BB%87_Th%C3%B4ng_tin"}]}}}`
+
+#### Results:
+- Result 1: {"response": [{"title": "UIT: Tr\u01b0\u1eddng \u0110\u1ea1i h\u1ecdc C\u00f4ng ngh\u1ec7 Th\u00f4ng tin", "url": "https://www.uit.edu.vn"}, {"title": "Tr\u01b0\u1eddng \u0110\u1ea1i h\u1ecdc C\u00f4ng ngh\u1ec7 Th\u00f4ng tin - \u0110\u1ea1i h\u1ecdc Qu\u1ed1c gia ...", "url": "https://www.facebook.com/UIT.Fanpage/"}, {"title": "Tr\u01b0\u1eddng \u0110\u1ea1i h\u1ecdc C\u00f4ng ngh\u1ec7 Th\u00f4ng tin, \u0110\u1ea1i h\u1ecdc Qu\u1ed1c gia ...", "url": "https://vi.wikipedia.org/wiki/Tr%C6%B0%E1%BB%9Dng_%C4%90%E1%BA%A1i_h%E1%BB%8Dc_C%C3%B4ng_ngh%E1%BB%87_Th%C3%B4ng_tin"}]}
+
+#### Metadata:
+- Duration: 6.06 seconds
+- Input tokens: 6804
+
+## Errors Encountered:

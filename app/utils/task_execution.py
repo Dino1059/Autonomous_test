@@ -16,8 +16,7 @@ from dotenv import load_dotenv
 from inspect import signature
 
 from browser_use import Agent, Controller
-from browser_use.browser.browser import Browser, BrowserConfig
-from browser_use.browser.context import BrowserContext
+from browser_use.browser import BrowserProfile, BrowserSession
 from browser_use.agent.views import ActionResult
 from browser_use.agent.memory import MemoryConfig
 from playwright.sync_api import ElementHandle
@@ -26,13 +25,19 @@ from src.llms.base import BaseLLMWorker
 from pyobjtojson import obj_to_json
 
 from app.utils.globals import SETTINGS, BACKGROUND_TASKS, USER_SIMULATOR_INTERACTIONS, CANCELLATION_FLAGS, get_or_initialize_llm_worker
-from app.utils.browser_actions import paste_from_clipboard, call_user_simulator, get_system_message, click_the_send_button, sanitize_response, go_down_the_page
+from app.utils.browser_actions import paste_from_clipboard, call_user_simulator, get_system_message, sanitize_response
 from app.utils.llm_utils import create_llm_for_task, create_model_from_schema, generate_report
-from app.serializers.models import MetadataCampaign, TaskConfig
+from app.serializers.models import TaskConfig, BrowserConfig
+from playwright.async_api import async_playwright
+
+sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+from dotenv import load_dotenv
+load_dotenv()
+
 
 import json_repair
 
-
+## Current not used
 async def record_activity(agent_obj):
     """Hook function that captures and records agent activity at each step"""
     logger = logging.getLogger("RECORD_ACTIVITY")
@@ -122,7 +127,7 @@ async def record_activity(agent_obj):
         logger.info(f"Recording step for URL: {urls_json_last_elem}")
         
         # Send data to the recording API with task_id as query parameter
-        url = f"http://127.0.0.1:9000/post_agent_history_step?task_id={task_id}"
+        url = f"http://127.0.0.1:9091/post_agent_history_step?task_id={task_id}"
         response = requests.post(url, json=model_step_summary)
         logger.info(f"Recording API response: {response.json()}")
     
@@ -143,7 +148,7 @@ async def run_tasks(
     simulator_task: str,
     custom_actions: List[Dict[str, str]] = [],
     task_id: str = None,
-    use_own_browser: bool = False
+    browser_config: Optional[BrowserConfig] = None
 ) -> Tuple[List[Dict[str, Any]], List[Dict[str, Any]]]:
     """Run multiple browser automation tasks with specified settings in the same browser context"""
     
@@ -162,7 +167,7 @@ async def run_tasks(
         "simulator_provider": sim_provider,
         "simulator_model": sim_model,
         "simulator_temperature": sim_temperature,
-        "use_own_browser": use_own_browser
+        "browser_config": browser_config
     })
     
     # Initialize the LLM worker with the specified provider
@@ -209,39 +214,33 @@ async def run_tasks(
                 logger.info(f"Task {task_id} was cancelled before execution. Aborting.")
                 return [{"status": "cancelled", "message": "Task cancelled before execution"}], []
                 
-        # Check if settings contain use_own_browser flag
-        use_own_browser = SETTINGS.get("use_own_browser", False)
-        logger.info(f"Using own browser: {use_own_browser}")
-        
+
         # Load environment variables
         load_dotenv()
         
-        # Initialize browser with user's browser data if requested
-        if use_own_browser:
-            # Get browser settings from environment variables or use defaults
-            # Environment variables for browser configuration:
-            # - BROWSER_BINARY_PATH: Path to the browser executable (e.g., "C:\Program Files\Google\Chrome\Application\chrome.exe")
-            # - USER_DATA_DIR: Path to the user data directory (e.g., "C:\Users\username\AppData\Local\Google\Chrome\User Data")
-            browser_binary_path = os.getenv("BROWSER_BINARY_PATH", "C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe")
-            user_data_dir = os.getenv("USER_DATA_DIR", "C:\\Users\\user\\AppData\\Local\\Google\\Chrome\\User Data")
-            
-            # Format the extra_chromium_args with the user data directory
-            extra_chromium_args = [f"--user-data-dir='{user_data_dir}'"]
-            
-            logger.info(f"Using browser at: {browser_binary_path}")
-            logger.info(f"Using user data directory: {user_data_dir}")
-            
-            browser = Browser(
-                config=BrowserConfig(
-                    # Use environment variables for browser configuration
-                    browser_binary_path=browser_binary_path,
-                    extra_chromium_args=extra_chromium_args,
-                )
-            )
-        else:
-            browser = Browser()
+        # Initialize browser configuration
+        final_browser_config = {}
         
-        async with await browser.new_context() as context:
+        # Start with browser_config if provided
+        if browser_config:
+            final_browser_config = browser_config.model_dump(exclude_none=True)
+            logger.info(f"Using provided browser_config: {list(final_browser_config.keys())}")
+            browser_profile = BrowserProfile(
+                **final_browser_config
+            )
+            browser_session = BrowserSession(browser_profile=browser_profile)
+        else:
+            browser_profile = None
+            browser_session = BrowserSession()
+    
+
+        async with async_playwright() as p:
+            browser = await p.chromium.launch(
+			headless=True,
+		    )
+            #context = await browser.new_context(browser_profile=browser_profile)
+        
+            
             # Loop through tasks and execute them in the same context
             for i, task in enumerate(tasks):
                 # Check if the task has been cancelled
@@ -314,11 +313,11 @@ async def run_tasks(
                 kwargs["task"] = task_config.prompt
                 kwargs["llm"] = llm
                 kwargs["controller"] = controller
-                kwargs["browser_context"] = context
+                kwargs["browser_session"] = browser_session
                 
                 # Debug log all parameters being passed to Agent
-                logging.getLogger("RUN_TASKS").info("Agent signature: %s", inspect.signature(Agent))
-                logging.getLogger("RUN_TASKS").info("Final kwargs keys: %r", list(kwargs.keys()))
+                #logging.getLogger("RUN_TASKS").info("Agent signature: %s", inspect.signature(Agent))
+                #logging.getLogger("RUN_TASKS").info("Final kwargs keys: %r", list(kwargs.keys()))
 
                 
                 # Handle planner_llm parameter if specified
@@ -399,7 +398,7 @@ async def run_tasks(
                     # Create task for agent run so we can monitor cancellation separately
                     agent_run_task = asyncio.create_task(agent.run(
                         max_steps=task_config.max_steps,
-                        on_step_start=record_activity  # Add recording hook
+                        #on_step_start=record_activity  # Add recording hook
                     ))
                     
                     # Monitor the agent task and check for cancellation
@@ -425,12 +424,13 @@ async def run_tasks(
                     # Get the result if task completed successfully
                     history = await agent_run_task
                     # Update report_config with the correct state (history)
-                    report_config['state'] = agent.state
-                    ## report generation
-                    await generate_report(
-                        task=task_config.prompt,
-                        **report_config
-                    )
+                    if report_config:
+                        report_config['state'] = agent.state
+                        ## report generation
+                        await generate_report(
+                            task=task_config.prompt,
+                            **report_config
+                        )
                     # Get results
                     final_result = history.final_result()
                     final_result = json_repair.loads(final_result)
@@ -460,7 +460,7 @@ async def run_tasks(
                     all_results.append({
                         "task_name": task_config.name,
                         "result": final_result,
-                        "report_folder": report_config['report_folder']
+                        "report_folder": report_config['report_folder'] if report_config else None
                     })
                     
                     all_history.append({
@@ -488,7 +488,7 @@ async def run_tasks(
     except Exception as e:
         traceback_str = traceback.format_exc()
         logger.error(f"Error in run_tasks: {traceback_str}")
-        return [{"error": str(e), "traceback": traceback_str, "agent_parameters": ', '.join(kwargs.keys())}], []
+        return [{"error": str(e), "traceback": traceback_str}], []
     finally:
         # Clean up cancellation flag if task is complete
         if task_id and task_id in CANCELLATION_FLAGS:
@@ -503,8 +503,6 @@ def register_controller_actions(controller):
     registry.action('Always use this action everytime you see something like Paste text...')(paste_from_clipboard)
     registry.action('Call user simulator')(call_user_simulator)
     registry.action("Extract the system's message")(get_system_message)
-    registry.action("Click the send button")(click_the_send_button)
-    registry.action("Scroll down the page")(go_down_the_page)
 
 def register_custom_action(controller, action_config):
     """Register a custom action from the API"""
@@ -568,7 +566,7 @@ async def run_tasks_background(
     simulator_temperature: float,
     simulator_task: str,
     custom_actions: List[Dict[str, str]],
-    use_own_browser: bool = False
+    browser_config: Optional[BrowserConfig] = None
 ):
     """Run tasks in the background and store the results"""
     try:
@@ -588,10 +586,10 @@ async def run_tasks_background(
             simulator_provider,
             simulator_model,
             simulator_temperature,
-                          simulator_task,
-              custom_actions,
-              task_id,  # Pass task_id to run_tasks for cancellation check
-              use_own_browser  # Pass use_own_browser flag
+            simulator_task,
+            custom_actions,
+            task_id,  # Pass task_id to run_tasks for cancellation check
+            browser_config  # Pass browser_config parameter
         )
         
         # Check if task was cancelled from results

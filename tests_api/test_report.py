@@ -55,6 +55,15 @@ def test_custom_output_model():
                     "model": "gemini-2.0-flash",   # Different model for planner
                     "temperature": 0.2           # Different temperature for planner
                 },
+                "report_config": {
+                    "provider": "google",
+                    "model": "gemini-2.0-flash",
+                    "temperature": 0.2,
+                    "is_report_reasoning": False,
+                    "extend_report_system_message": "Include code samples when relevant.",
+                    "use_vision_for_report": False,
+                    "report_folder": "E:/official_DopikAI/ai-agent-tester/tests_api/demo_simple"
+                }
             }
         ],
         "laminar_api_key": os.getenv("LAMINAR_API_KEY", ""),

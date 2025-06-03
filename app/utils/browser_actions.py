@@ -12,8 +12,7 @@ from typing import Dict, Any, List, Optional
 # Import from browser_use package
 sys.path.append(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
 from browser_use.agent.views import ActionResult
-from browser_use.browser.context import BrowserContext
-from playwright.sync_api import ElementHandle
+from browser_use.browser import BrowserSession
 
 def sanitize_response(text: str) -> str:
     """Remove excessive newlines or formatting that may trigger paste bugs"""
@@ -24,43 +23,8 @@ def sanitize_response(text: str) -> str:
     sanitized = sanitized.replace('\n', '<line_break>')
     return sanitized
 
-##work only for streamlit
-async def go_down_the_page(temp_params: str, browser: BrowserContext):
-    """Scroll down the page"""
-    logger = logging.getLogger("GO DOWN THE PAGE")
-    logger.info("Scrolling down the page")
-    try:
-        page = await browser.get_current_page()
-        # For Playwright
-        await page.evaluate("""
-(() => {
-    // Target the main Streamlit content container
-    const mainContainer = document.querySelector('.stAppViewContainer');
-    if (mainContainer) {
-        mainContainer.scrollTo({
-            top: 5000,
-            behavior: 'smooth'
-        });
-    } else {
-        // Fallback to main block container
-        const blockContainer = document.querySelector('.stMainBlockContainer');
-        if (blockContainer) {
-            blockContainer.scrollTo({
-                top: 5000,
-                behavior: 'smooth'
-            });
-        }
-    }
-})()
-""")
 
-        return ActionResult(extracted_content="Done scrolling down the page.", include_in_memory=True)
-    except Exception as e:
-        logger.error(f"Error scrolling down the page: {str(e)}")
-        return ActionResult(extracted_content=f"Failed to scroll down the page: {str(e)}", include_in_memory=True)
-
-
-async def paste_from_clipboard(temp_params: str, browser: BrowserContext):
+async def paste_from_clipboard(temp_params: str, browser: BrowserSession):
     """Paste text from clipboard to current input"""
     raw_text = pyperclip.paste()
     clean_text = sanitize_response(raw_text)
@@ -72,9 +36,10 @@ async def paste_from_clipboard(temp_params: str, browser: BrowserContext):
     logger = logging.getLogger("PASTE FROM CLIPBOARD")
     logger.info(f"Pasted: {clean_text}")
     ## implement go down the page
-    await go_down_the_page(temp_params, browser)
     return ActionResult(
-        extracted_content="Done pasting to input box. Please call `click_the_send_button` action to send the message.",
+        extracted_content=f"""Has copy the text: {clean_text} to input box. 
+        Please call `click_element_by_index` action to send the message.
+        """,
         include_in_memory=True
     )
 
@@ -161,7 +126,11 @@ async def call_user_simulator(temp_params: str) -> ActionResult:
     # Step 2: Get response from the user simulator LLM
     # Handle potential images in the request - pass the list directly to get_response
     if image_urls and isinstance(image_urls, list) and len(image_urls) > 0:
-        response = llm_worker.get_response(question, session_id, image_urls)
+        try:
+            response = llm_worker.get_response(question, session_id, image_urls)
+        except Exception as e:
+            ## get response without image
+            response = llm_worker.get_response(question, session_id)
     else:
         response = llm_worker.get_response(question, session_id)
     
@@ -193,11 +162,15 @@ async def call_user_simulator(temp_params: str) -> ActionResult:
         pyperclip.copy(clean_response)
     ## Trick call `go_down_the_page` action
     return ActionResult(
-        extracted_content="Done calling user simulator. Please call the `click_element_by_index` and `paste_from_clipboard` actions.",
+        extracted_content=f"""Done calling user simulator.
+        Response of user simulator: {clean_response}
+        Feedback of user simulator: {json_tester_response['feedback']}
+        Please call the `click_element_by_index` and `paste_from_clipboard` actions.
+        """,
         include_in_memory=True
     )
 
-async def get_system_message(temp_params: str, browser: BrowserContext):
+async def get_system_message(temp_params: str, browser: BrowserSession):
     """Extract the system's message from the page"""
     from pydantic import Field
     from langchain_google_genai import ChatGoogleGenerativeAI
@@ -247,7 +220,7 @@ async def get_system_message(temp_params: str, browser: BrowserContext):
         "https://example.com/image2.jpg",
         "https://example.com/image3.jpg"
     ]
-    
+    Don't include the relative url like that "/images/ERA3_Logo.png"
     You should return in JSON FORMAT:
     {format_instructions}
     Page: {page}
@@ -266,7 +239,10 @@ async def get_system_message(temp_params: str, browser: BrowserContext):
         pyperclip.copy(msg)
         logger.info(msg)
         return ActionResult(
-            extracted_content="Done extracting system message. Please call `call_user_simulator` action.", 
+            extracted_content=f"""
+            Done extracting system message.
+            System message: {output.content}
+            """, 
             include_in_memory=True
         )
     except Exception as e:
@@ -274,28 +250,4 @@ async def get_system_message(temp_params: str, browser: BrowserContext):
         msg = f'📄  Extracted from page\n: {content}\n'
         logger.info(msg)
         return ActionResult(extracted_content=msg)
-
-async def click_the_send_button(temp_params: str, browser: BrowserContext):
-    """Click the send button in the chat interface"""
-    session = await browser.get_session()
-    initial_pages = len(session.context.pages)
-
-    # Locate the send button via the provided CSS selector helper
-    element_handle: Optional[ElementHandle] = await browser.get_locate_element_by_css_selector(
-        'button[data-testid="stChatInputSubmitButton"]'
-    )
-    if not element_handle:
-        raise Exception('Send button not found on the page')
-
-    logger = logging.getLogger("CLICK THE SEND BUTTON")
-    try:
-        # Click the button directly
-        await element_handle.click()
-        msg = '🖱️  Clicked the send button. Please call `wait` action to wait for the response.'
-        logger.info(msg)
-
-        return ActionResult(extracted_content=msg, include_in_memory=True)
-    except Exception as e:
-        logger.warning('Failed to click the send button', exc_info=True)
-        return ActionResult(error=str(e)) 
 

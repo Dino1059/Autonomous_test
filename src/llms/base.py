@@ -71,7 +71,7 @@ class BaseLLMWorker:
                 top_p=top_p,
                 top_k=top_k,
                 max_output_tokens=max_output_tokens,
-                google_api_key=os.getenv('GEMINI_API_KEY')
+                google_api_key=os.getenv('GOOGLE_API_KEY')
             )
         elif provider == "openai":
             self.llm = ChatOpenAI(

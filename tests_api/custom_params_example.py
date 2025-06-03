@@ -7,65 +7,70 @@ load_dotenv()
 # API endpoint
 API_BASE_URL = "http://localhost:8081"
 
-def test_custom_output_model():
-    # Define custom output model fields
-    output_model_fields = {
-        "type": "object",
-        "properties": {
-          "response": {
-            "type": "array",
-            "items": {
-              "type": "object",
-              "properties": {
-                "title": {
-                  "type": "string"
-                },
-                "url": {
-                  "type": "string"
-                }
-              }
-            }
-          }
-        }
-    }
-
-    # Sample task with custom output model
+def test_custom_params():
+    """Test sending arbitrary parameters to the Agent via TaskConfig"""
+    
+    # Sample task with custom parameters
     payload = {
         "tasks": [
             {
-                "name": "Test Custom Output Model",
-                "prompt": "Go to google and search for UIT, then extract the main title and url of first three results.",
-                "max_steps": 30,
-                "output_model_fields": output_model_fields,
-                "exclude_actions": [],
+                "name": "Test Custom Parameters",
+                "prompt": "Go to example.com and extract the heading text and subheading",
+                "max_steps": 20,
+                
+                # Standard TaskConfig parameters
                 "llm_provider": "google",
                 "llm_model": "gemini-2.0-flash",
                 "llm_temperature": 0.0,
                 "enable_memory": True,
-                "memory_interval": 10,
+                "memory_interval": 5,
                 "initial_actions": [
-                    {"open_tab": {"url": "https://www.google.com"}}
+                    {"open_tab": {"url": "https://example.com"}}
                 ],
-                # Custom parameters that will be passed directly to Agent:
-                "use_vision_for_planner": True,  # Example of custom param
-                "planner_interval": 5,           # Example of custom param
-                # Custom planner LLM configuration:
+                
+                # Example 1: Using a different LLM for planning (optional)
+                # Note: Now planner_llm is completely optional - if not specified,
+                # no default will be added to the Agent parameters
                 "planner_llm": {
-                    "provider": "google",        # Can be different from main LLM
-                    "model": "gemini-2.0-flash",   # Different model for planner
-                    "temperature": 0.2           # Different temperature for planner
+                    "provider": "google",           
+                    "model": "gemini-1.5-pro",      
+                    "temperature": 0.1              
                 },
+                
+                # Example 2: Configuring Agent behavior with custom parameters 
+                "use_vision_for_planner": True,     # Enable vision for planner
+                "planner_interval": 4,              # Run planner every 4 steps
+                
+                # Example 3: Adding arbitrary parameters (if supported by Agent)
+                "max_retries": 3,                   # Custom retry parameter if supported
+                "timeout": 60                       # Custom timeout parameter if supported
+            },
+            # Second task without explicit planner_llm to demonstrate optional behavior
+            {
+                "name": "Test Without Planner LLM",
+                "prompt": "Go to example.com and extract the meta description",
+                "max_steps": 15,
+                "llm_provider": "google",
+                "llm_model": "gemini-2.0-flash",
+                "llm_temperature": 0.0,
+                "enable_memory": True,
+                "initial_actions": [
+                    {"open_tab": {"url": "https://example.com"}}
+                ],
+                # No planner_llm specified - will not be passed to Agent
+                "use_vision_for_planner": True,
+                "planner_interval": 3
             }
         ],
         "laminar_api_key": os.getenv("LAMINAR_API_KEY", ""),
         "laminar_base_url": os.getenv("LAMINAR_BASE_URL", ""),
         "laminar_http_port": int(os.getenv("LAMINAR_HTTP_PORT", "0") or 0),
         "laminar_grpc_port": int(os.getenv("LAMINAR_GRPC_PORT", "0") or 0),
-        "session_id": "test_custom_output_model",
+        "session_id": "test_custom_params",
         "simulator_provider": "google",
         "simulator_model": "gemini-2.0-flash",
         "simulator_temperature": 0.0,
-        "simulator_task": "dsdsadsa",
+        "simulator_task": "",
         "custom_actions": []
     }
 
@@ -110,6 +115,8 @@ def poll_results(task_id):
                 print("Task failed!")
                 print("Error:")
                 print(data.get("error"))
+                print("Traceback:")
+                print(data.get("traceback"))
                 return
             elif status == "cancelled":
                 print("Task was cancelled")
@@ -122,4 +129,4 @@ def poll_results(task_id):
     print("Max polling attempts reached. Task may still be running.")
 
 if __name__ == "__main__":
-    test_custom_output_model()
+    test_custom_params() 

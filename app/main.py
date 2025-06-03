@@ -32,6 +32,17 @@ async def root():
     """Root endpoint that returns a welcome message"""
     return DataResponse(data=MessageResponse(message="Welcome to AutoTester API"))
 
+@app.get("/health", response_model=DataResponse[dict])
+async def health():
+    """Health check endpoint that returns the application status"""
+    health_data = {
+        "status": "healthy",
+        "service": "AutoTester API",
+        "version": "1.0.0",
+        "uptime": "running"
+    }
+    return DataResponse(data=health_data, message="Service is healthy")
+
 if __name__ == "__main__":
     # Get port from command line or environment variable, with a default fallback
     parser = argparse.ArgumentParser(description="AutoTester API")

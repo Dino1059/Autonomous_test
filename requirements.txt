@@ -5,5 +5,8 @@ langchain-openai
 langchain-google-genai
 langchain-core
 lmnr[all]
-browser-use
+browser-use==0.1.48
 playwright
+# Dependencies for GIF/Video generation
+Pillow
+opencv-python

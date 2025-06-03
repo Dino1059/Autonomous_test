@@ -13,7 +13,10 @@ import logging
 from app.utils.prompts import ReportPrompt
 import json
 from langchain_core.messages import HumanMessage
-
+from dotenv import load_dotenv
+import sys
+sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+load_dotenv()
 def create_llm_for_task(task_config: TaskConfig):
     """Create an LLM instance based on task configuration"""
     provider = task_config.llm_provider

@@ -38,7 +38,7 @@ async def run_tasks_endpoint(request: RunTaskRequest, background_tasks: Backgrou
         request.simulator_temperature,
         request.simulator_task,
         custom_actions_dict,
-        request.use_own_browser
+        request.browser_config
     )
     
     return DataResponse(data=MessageResponse(message=f"Task started with ID: {task_id}"))

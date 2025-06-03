@@ -2,14 +2,9 @@
 Pydantic models for serializing request and response data
 """
 from typing import Dict, Any, List, Optional, Type, Generic, TypeVar
-from pydantic import BaseModel, Field, create_model, Extra
+from pydantic import BaseModel, Field, create_model
 
 T = TypeVar('T')
-
-class MetadataCampaign(BaseModel):
-    campaign_name: str
-    campaign_id: str
-    thread_id: str
 
 class TaskConfig(BaseModel):
     name: str = Field(..., description="Name of the task")
@@ -34,6 +29,47 @@ class TaskConfig(BaseModel):
     class Config:
         extra = "allow"  # Allow any extra attributes to be passed to Agent constructor
 
+class BrowserConfig(BaseModel):
+    """Browser configuration for browser-use and playwright settings"""
+    # Browser-Use specific parameters
+    keep_alive: Optional[bool] = Field(False, description="Keep browser alive after agent finishes")
+    allowed_domains: Optional[List[str]] = Field(None, description="List of allowed domains for navigation")
+    disable_security: Optional[bool] = Field(None, description="Disable browser security features")
+    highlight_elements: Optional[bool] = Field(None, description="Highlight interactive elements")
+    viewport_expansion: Optional[int] = Field(None, description="Expand viewport for better element detection")
+    
+    # Common Playwright launch options
+    headless: Optional[bool] = Field(None, description="Run browser in headless mode")
+    executable_path: Optional[str] = Field(None, description="Path to browser executable")
+    user_data_dir: Optional[str] = Field(None, description="Path to user data directory")
+    profile_directory: Optional[str] = Field(None, description="Browser profile directory name")
+    args: Optional[List[str]] = Field(None, description="Additional browser arguments")
+    
+    # Viewport settings
+    viewport: Optional[Dict[str, int]] = Field(None, description="Viewport size settings")
+    user_agent: Optional[str] = Field(None, description="Custom user agent string")
+    device_scale_factor: Optional[float] = Field(None, description="Device scale factor")
+    
+    # Connection settings
+    wss_url: Optional[str] = Field(None, description="WSS URL for playwright-protocol connection")
+    cdp_url: Optional[str] = Field(None, description="CDP URL for Chrome DevTools Protocol connection")
+    browser_pid: Optional[int] = Field(None, description="PID of running browser process to connect to")
+    
+    # Security and privacy settings
+    ignore_https_errors: Optional[bool] = Field(None, description="Ignore HTTPS errors")
+    bypass_csp: Optional[bool] = Field(None, description="Bypass Content Security Policy")
+    permissions: Optional[List[str]] = Field(None, description="Browser permissions to grant")
+    
+    # Recording settings
+    record_video_dir: Optional[str] = Field(None, description="Directory to save video recordings")
+    record_har_path: Optional[str] = Field(None, description="Path to save HAR file")
+    
+    # Environment variable fallbacks
+    browser_binary_path: Optional[str] = Field(None, description="Browser binary path (fallback to BROWSER_BINARY_PATH env var)")
+    
+    class Config:
+        extra = "allow"  # Allow any additional playwright/browser-use parameters
+
 class CustomAction(BaseModel):
     name: str = Field(..., description="Name of the action to display to the agent")
     code: str = Field(..., description="Python code for the action function")
@@ -50,7 +86,7 @@ class RunTaskRequest(BaseModel):
     simulator_temperature: float = Field(..., description="User simulator temperature")
     simulator_task: str = Field("", description="User simulator task description")
     custom_actions: List[CustomAction] = Field(default_factory=list, description="Custom actions to register")
-    use_own_browser: bool = Field(False, description="Whether to use the user's own browser with user data")
+    browser_config: Optional[BrowserConfig] = Field(None, description="Browser configuration settings")
 
 class RunTaskResponse(BaseModel):
     results: List[Dict[str, Any]] = Field(..., description="Task execution results")

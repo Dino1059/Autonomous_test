@@ -82,13 +82,11 @@ def test_custom_action():
                 "name": "Custom Actions Test",
                 "prompt": """
                 Visit the website and perform the following:
-                1. Extract all links from the page using the custom action
-                2. Count all button elements on the page using the custom action with selector=button
-                ONLY use the custom actions provided: extract_all_links, count_elements
+                And call `go_down_the_page` action to scroll down the page.
                 """,
                 "max_steps": 20,
                 "output_model_fields": None,
-                "exclude_actions": ["search_google", "go_back", "input_text", "save_pdf", "switch_tab", "close_tab", "extract_content", "send_keys", "get_dropdown_options", "select_dropdown_options", "drag_drop", "get_drag_elements", "get_element_coordinates", "execute_drag_operation", "click_element", "click_element_by_text", "scroll", "click_the_send_button"],
+                "exclude_actions": ["search_google", "go_back", "input_text", "save_pdf", "switch_tab", "close_tab", "extract_content", "send_keys", "get_dropdown_options", "select_dropdown_options", "drag_drop", "get_drag_elements", "get_element_coordinates", "execute_drag_operation", "click_element", "click_element_by_text", "scroll_down", "click_the_send_button"],
                 "llm_provider": "google",
                 "llm_model": "gemini-2.0-flash",
                 "llm_temperature": 0.0,
