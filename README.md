@@ -1,102 +1,81 @@
-# Core API for AutoTesterWebUI
+# AI Agent Tester
 
-## Features
+An automated browser testing framework with AI-powered test execution and user simulation. The system consists of a FastAPI backend for test orchestration and a Gradio web interface for test management.
 
-- **Browser Automation**: Execute complex web testing tasks with Browser-use
-- **Task Management**: Run, monitor, and cancel automation tasks via API
-- **Action Templates**: Predefined templates for common browser interactions 
-- **Custom Actions**: Create and execute custom browser automation scripts
-- **User Simulation**: Simulate user behavior for interactive testing
-- **REST API**: FastAPI-based endpoints with comprehensive documentation
+## 🚀 Quick Start
 
-## Playround
-See the `test_api` for examples how to use API.
-
-## Installation Guide
-
+### Installation
 ```bash
-# Clone the repository
-git clone https://github.com/DopikAI-Labs/ai-agent-tester/tree/dev/core-api
+conda create -n agent_tester python=3.11.11
+conda activate agent_tester
 cd ai-agent-tester
-
-# Create and activate virtual environment
-python -m venv venv
-source venv/bin/activate  # Windows: venv\Scripts\activate
-
-# Install dependencies
 pip install -r requirements.txt
-
-# Install Playwright browsers
 playwright install
 ```
 
-## Environment Variables
 
-The application uses environment variables for configuration. Create a `.env` file in the project root with the following variables:
+### Env
+See `.env.example`
 
-```
-# API Keys
-OPENAI_API_KEY=your_openai_api_key
-GEMINI_API_KEY=your_gemini_api_key
-GOOGLE_API_KEY=your_google_api_key
+### 🏃‍♂️ Running the Applications
 
-# Laminar Configuration
-LAMINAR_API_KEY=your_laminar_api_key
-LAMINAR_BASE_URL=your_laminar_base_url
-LAMINAR_HTTP_PORT=0
-LAMINAR_GRPC_PORT=0
-
-# Target URL for testing
-TARGET_URL=https://example.com
-
-# Browser Configuration
-BROWSER_BINARY_PATH=C:\Program Files\Google\Chrome\Application\chrome.exe
-USER_DATA_DIR=C:\Users\username\AppData\Local\Google\Chrome\User Data
-
-# Server Configuration
-PORT=8081
-HOST=0.0.0.0
-```
-
-### Run API
 ```bash
-cd app
-python main.py --port 8000
+## run tester api
+python app/main.py --port 8081 --host 0.0.0.0
+
+## run gradio webui
+python gradio_ui/webui.py
 ```
 
-## Project Structure
 
-```
-app/
-├── controllers/       # Business logic for handling API requests
-│   ├── actions.py     # Available browser automation actions
-│   ├── tasks.py       # Task execution and management
-│   └── templates.py   # Template management for custom actions
-├── routers/           # API route definitions
-│   ├── actions_router.py
-│   ├── tasks_router.py
-│   └── templates_router.py
-├── serializers/       # Data models and schemas
-│   └── models.py      # Pydantic models for request/response validation
-├── utils/             # Helper functions and utilities
-│   ├── browser_actions.py  # Browser interaction implementations
-│   ├── globals.py          # Global variables and state management
-│   ├── llm_utils.py        # LLM integration utilities
-│   └── task_execution.py   # Background task execution logic
-└── main.py            # FastAPI application entry point
-```
+## 📋 Usage
 
-### Key Components
+### Access Points
 
-- **main.py**: Initializes the FastAPI application, configures middleware, and includes routers
-- **controllers/**: Contains the business logic for the application
-  - **actions.py**: Defines available browser automation actions like clicking, scrolling, etc.
-  - **tasks.py**: Manages the execution of automation tasks with background processing
-  - **templates.py**: Provides reusable code templates for custom automation actions
-- **routers/**: Defines API endpoints and routes requests to appropriate controllers
-- **serializers/models.py**: Contains Pydantic models for request/response validation and type safety
-- **utils/**: Helper functions and utilities
-  - **browser_actions.py**: Core implementation of browser automation capabilities
-  - **globals.py**: Manages global state and shared resources
-  - **llm_utils.py**: Integration with language models for simulation
-  - **task_execution.py**: Background task processing logic
+- **API Documentation**: http://localhost:8081/docs (Swagger UI)
+- **API Health Check**: http://localhost:8081/health
+- **Gradio Web Interface**: http://localhost:7860
+
+### Using the Gradio Interface
+
+1. **Select a Test Template**: Choose from available YAML-based test templates
+2. **Fill Required Inputs**: The interface dynamically shows input fields based on the selected template
+3. **Run Test**: Click "🚀 Run Test" to execute the automated browser test
+4. **View Results**: Monitor real-time progress and view detailed reports
+
+### API Endpoints
+
+The FastAPI backend provides the following main endpoints:
+
+- `GET /` - Welcome message
+- `GET /health` - Health check
+- `POST /tasks` - Create and execute test tasks
+- `GET /tasks/{task_id}` - Get task status and results
+- Additional endpoints for settings, actions, and task management
+
+
+
+### Test Templates
+- **Location**: `gradio_ui/templates_agent/`
+- **Format**: YAML files with placeholder definitions
+- **Features**:
+  - Configurable test scenarios
+  - Dynamic input field generation
+  - Support for custom actions and browser configurations
+
+## 📊 Reports
+
+Test reports are automatically generated and stored in:
+- **Default Location**: `gradio_ui/reports/{case_id}/`
+- **Formats**: 
+  - Markdown reports with test results
+  - Screenshots for each test step
+  - JSON data with detailed execution logs
+
+
+
+### Adding New Templates
+
+1. Create a new YAML file in `gradio_ui/templates_agent/`
+2. Define placeholders and test steps
+3. The template will automatically appear in the Gradio interface
