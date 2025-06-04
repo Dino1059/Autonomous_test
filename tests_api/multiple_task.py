@@ -1,3 +1,16 @@
+"""
+Simple demonstration of the CDP feature.
+
+To test this locally, follow these steps:
+1. Create a shortcut for the executable Chrome file.
+2. Add the following argument to the shortcut:
+   - On Windows: `--remote-debugging-port=9222`
+3. Open a web browser and navigate to `http://localhost:9222/json/version` to verify that the Remote Debugging Protocol (CDP) is running.
+4. Launch this example.
+
+@dev You need to set the `GOOGLE_API_KEY` environment variable before proceeding.
+"""
+
 import asyncio
 import os
 import sys
@@ -9,73 +22,36 @@ from dotenv import load_dotenv
 load_dotenv()
 
 from langchain_google_genai import ChatGoogleGenerativeAI
-from playwright.async_api import async_playwright
+from langchain_openai import ChatOpenAI
 from pydantic import SecretStr
 
-from browser_use import Agent
+from browser_use import Agent, Controller
 from browser_use.browser import BrowserSession
 
-api_key = os.getenv('GOOGLE_API_KEY')
-
+api_key = os.getenv('OPENAI_API_KEY')
 if not api_key:
-	raise ValueError('GOOGLE_API_KEY is not set')
+	raise ValueError('OPENAI_API_KEY is not set')
 
-llm = ChatGoogleGenerativeAI(model='gemini-2.0-flash', api_key=SecretStr(api_key))
+browser_session = BrowserSession(
+	headless=False,
+	#user_data_dir="C:/Users/anpro/.config/browseruse/profiles/Andeptrai",
+)
+controller = Controller()
 
 
 async def main():
-	async with async_playwright() as p:
-		browser = await p.chromium.launch(
-			headless=False,
-		)
+	task = 'Go to google. Done task'
+	model = ChatOpenAI(model='gpt-4o-mini', api_key=SecretStr(api_key))
+	agent = Agent(
+		task=task,
+		llm=model,
+		controller=controller,
+		browser_session=browser_session,
+	)
 
-		context = await browser.new_context(
-			viewport={'width': 1502, 'height': 853},
-			ignore_https_errors=True,
-		)
+	await agent.run()
+	#await browser_session.close()
 
-		agent = Agent(
-			browser_session=BrowserSession(
-				browser_context=context,
-			),
-			task='Go to https://browser-use.com/',
-			llm=llm,
-		)
-
-		try:
-			result = await agent.run()
-			print(f'First task was {"successful" if result.is_successful else "not successful"}')
-
-			if not result.is_successful:
-				raise RuntimeError('Failed to navigate to the initial page.')
-
-			agent.add_new_task('Navigate to the documentation page')
-
-			result = await agent.run()
-			print(f'Second task was {"successful" if result.is_successful else "not successful"}')
-
-			if not result.is_successful:
-				raise RuntimeError('Failed to navigate to the documentation page.')
-
-			while True:
-				next_task = input('Write your next task or leave empty to exit\n> ')
-
-				if not next_task.strip():
-					print('Exiting...')
-					break
-
-				agent.add_new_task(next_task)
-				result = await agent.run()
-
-				print(f"Task '{next_task}' was {'successful' if result.is_successful else 'not successful'}")
-
-				if not result.is_successful:
-					print('Failed to complete the task. Please try again.')
-					continue
-
-		finally:
-			await context.close()
-			await browser.close()
 
 
 if __name__ == '__main__':

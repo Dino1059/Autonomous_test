@@ -224,267 +224,258 @@ async def run_tasks(
         # Start with browser_config if provided
         if browser_config:
             final_browser_config = browser_config.model_dump(exclude_none=True)
-            logger.info(f"Using provided browser_config: {list(final_browser_config.keys())}")
-            browser_profile = BrowserProfile(
-                **final_browser_config
-            )
-            browser_session = BrowserSession(browser_profile=browser_profile)
+            logger.info(f"Using provided browser_config: {final_browser_config}")
+            # browser_profile = BrowserProfile(
+            #     **final_browser_config
+            # )
+            browser_session = BrowserSession(**final_browser_config)
+            logger.info(f"Browser session: {browser_session}")
         else:
             browser_profile = None
             browser_session = BrowserSession()
     
 
-        async with async_playwright() as p:
-            browser = await p.chromium.launch(
-			headless=True,
-		    )
-            #context = await browser.new_context(browser_profile=browser_profile)
-        
+        await browser_session.start()
+        # Loop through tasks and execute them in the same context
+        for i, task in enumerate(tasks):
+            # Check if the task has been cancelled
+            if task_id and CANCELLATION_FLAGS.get(task_id, False):
+                logger.info(f"Task {task_id} has been cancelled. Stopping execution.")
+                return [{"status": "cancelled", "message": "Task cancelled during execution"}], []
             
-            # Loop through tasks and execute them in the same context
-            for i, task in enumerate(tasks):
-                # Check if the task has been cancelled
-                if task_id and CANCELLATION_FLAGS.get(task_id, False):
-                    logger.info(f"Task {task_id} has been cancelled. Stopping execution.")
-                    return [{"status": "cancelled", "message": "Task cancelled during execution"}], []
-                
-                from app.serializers.models import TaskConfig
-                task_config = TaskConfig.model_validate(task)
-                
-                # Create a new controller for this task
+            from app.serializers.models import TaskConfig
+            task_config = TaskConfig.model_validate(task)
+            
+            # Create a new controller for this task
+            output_model = None
+            if task_config.output_model_fields:
+                output_model = create_model_from_schema(task_config.output_model_fields)
+            else:
                 output_model = None
-                if task_config.output_model_fields:
-                    output_model = create_model_from_schema(task_config.output_model_fields)
-                else:
-                    output_model = None
+            
+            controller = Controller(
+                output_model=output_model, 
+                exclude_actions=task_config.exclude_actions
+            )
+            
+            # Register built-in actions with this controller
+            register_controller_actions(controller)
+            
+            # Register custom actions if any
+            for action in custom_actions:
+                try:
+                    register_custom_action(controller, action)
+                except Exception as e:
+                    print(f"Error registering custom action: {e}")
+            # Create the LLM for this specific task
+            llm = create_llm_for_task(task_config)
+            
+            # Prepare kwargs for Agent constructor
+            kwargs = task_config.model_dump()
+            report_config = kwargs.pop("report_config", None)
+            # Remove task-specific fields that shouldn't be passed to Agent
+            fields_to_remove = ["name", "max_steps", "output_model_fields", "exclude_actions", 
+                               "llm_provider", "llm_model", "llm_temperature", "prompt", "report_config"]
+            for field in fields_to_remove:
+                if field in kwargs:
+                    kwargs.pop(field)
+            # agent_params = signature(Agent).parameters.keys()
+            # agent_kwargs = {k: v for k, v in kwargs.items() if k in agent_params}
+            
+            # Handle memory configuration
+            if "enable_memory" in kwargs and kwargs["enable_memory"]:
+                memory_interval = kwargs.pop("memory_interval", 7)
+                agent_id = f"agent_{task_id}" if task_id else f"agent_{i+1}"
                 
-                controller = Controller(
-                    output_model=output_model, 
-                    exclude_actions=task_config.exclude_actions
+                # Create MemoryConfig
+                memory_config = MemoryConfig(
+                    agent_id=agent_id,
+                    memory_interval=memory_interval
                 )
                 
-                # Register built-in actions with this controller
-                register_controller_actions(controller)
-                
-                # Register custom actions if any
-                for action in custom_actions:
-                    try:
-                        register_custom_action(controller, action)
-                    except Exception as e:
-                        print(f"Error registering custom action: {e}")
-
-                # Create the LLM for this specific task
-                llm = create_llm_for_task(task_config)
-                
-                # Prepare kwargs for Agent constructor
-                kwargs = task_config.model_dump()
-                report_config = kwargs.pop("report_config", None)
-                # Remove task-specific fields that shouldn't be passed to Agent
-                fields_to_remove = ["name", "max_steps", "output_model_fields", "exclude_actions", 
-                                   "llm_provider", "llm_model", "llm_temperature", "prompt", "report_config"]
-                for field in fields_to_remove:
-                    if field in kwargs:
-                        kwargs.pop(field)
-
-                # agent_params = signature(Agent).parameters.keys()
-                # agent_kwargs = {k: v for k, v in kwargs.items() if k in agent_params}
-                
-                # Handle memory configuration
-                if "enable_memory" in kwargs and kwargs["enable_memory"]:
-                    memory_interval = kwargs.pop("memory_interval", 7)
-                    agent_id = f"agent_{task_id}" if task_id else f"agent_{i+1}"
-                    
-                    # Create MemoryConfig
-                    memory_config = MemoryConfig(
-                        agent_id=agent_id,
-                        memory_interval=memory_interval
-                    )
-                    
-                    # Replace individual memory params with memory_config
-                    kwargs.pop("enable_memory")
-                    kwargs["memory_config"] = memory_config
-                elif "enable_memory" in kwargs:
-                    # If enable_memory is False, just remove it and memory_interval
-                    kwargs.pop("enable_memory")
-                    if "memory_interval" in kwargs:
-                        kwargs.pop("memory_interval")
-                
-                # Set required parameters
-                kwargs["task"] = task_config.prompt
-                kwargs["llm"] = llm
-                kwargs["controller"] = controller
-                kwargs["browser_session"] = browser_session
-                
-                # Debug log all parameters being passed to Agent
-                #logging.getLogger("RUN_TASKS").info("Agent signature: %s", inspect.signature(Agent))
-                #logging.getLogger("RUN_TASKS").info("Final kwargs keys: %r", list(kwargs.keys()))
-
-                
-                # Handle planner_llm parameter if specified
-                if "planner_llm" in kwargs:
-                    if kwargs["planner_llm"] is True:
-                        # If planner_llm is set to True, use the same LLM
-                        kwargs["planner_llm"] = llm
-                    elif isinstance(kwargs["planner_llm"], dict):
-                        # If planner_llm is a dictionary with configuration, create a new LLM instance
-                        try:
-                            from app.utils.llm_utils import create_custom_llm
-                            planner_config = kwargs["planner_llm"]
-                            # Create custom LLM for planner
-                            kwargs["planner_llm"] = create_custom_llm(
-                                provider=planner_config.get("provider", task_config.llm_provider),
-                                model=planner_config.get("model", task_config.llm_model),
-                                temperature=planner_config.get("temperature", task_config.llm_temperature)
-                            )
-                            logger.info(f"Created custom planner LLM with provider={planner_config.get('provider')}, model={planner_config.get('model')}")
-                        except Exception as e:
-                            logger.error(f"Error creating custom planner LLM: {str(e)}")
-                            # Fall back to using the main LLM
-                            kwargs["planner_llm"] = llm
-                            logger.info("Falling back to using the main LLM for planning")
-
-                if report_config:
-                    if isinstance(report_config, dict):
-                        try:
-                            from app.utils.llm_utils import create_custom_llm
-                            report_config['reporter'] = create_custom_llm(
-                                provider=report_config.get("provider", task_config.llm_provider),
-                                model=report_config.get("model", task_config.llm_model),
-                                temperature=report_config.get("temperature", task_config.llm_temperature)
-                            )
-                            logger.info(f"Created custom report LLM with provider={report_config.get('provider')}, model={report_config.get('model')}")
-                        except Exception as e:
-                            logger.error(f"Error creating custom report LLM: {str(e)}")
-                    else:
-                        raise ValueError("report_config must be a dictionary")
-                
-                try:
-                    agent = Agent(**kwargs)
-                    
-                    # Add task_id as attribute for recording hook
-                    if task_id:
-                        agent.task_id = task_id
-                    else:
-                        agent.task_id = f"task_{i+1}"
-                        
-                except TypeError as e:
-                    logger.error(f"Error creating Agent: {str(e)}")
-                    # If we get a TypeError, it might be due to unexpected parameters
-                    # Try to extract the problematic parameter name from the error message
-                    error_msg = str(e)
-                    if "got an unexpected keyword argument" in error_msg:
-                        param_name = error_msg.split("'")[-2]
-                        logger.error(f"Removing unsupported parameter: {param_name}")
-                        if param_name in kwargs:
-                            kwargs.pop(param_name)
-                            # Try again with the problematic parameter removed
-                            agent = Agent(**kwargs)
-                    else:
-                        # Re-raise if it's not a parameter issue or couldn't be fixed
-                        raise
-                
-                # Define a cancellation check callback
-                async def check_cancellation():
-                    if task_id and CANCELLATION_FLAGS.get(task_id, False):
-                        logger.info(f"Task {task_id} has been cancelled during execution. Forcing agent to stop.")
-                        return True
-                    return False
-                
-                # Add cancellation check to agent
-                agent.cancellation_check = check_cancellation
-                
-                # Run agent
-                try:
-                    # Create task for agent run so we can monitor cancellation separately
-                    agent_run_task = asyncio.create_task(agent.run(
-                        max_steps=task_config.max_steps,
-                        #on_step_start=record_activity  # Add recording hook
-                    ))
-                    
-                    # Monitor the agent task and check for cancellation
-                    while not agent_run_task.done():
-                        # Check for cancellation every 0.5 seconds
-                        if task_id and CANCELLATION_FLAGS.get(task_id, False):
-                            logger.info(f"Cancellation detected for task {task_id}, aborting agent run.")
-                            # Call agent.stop() first to properly stop the agent
-                            agent.stop()
-                            logger.info(f"Called agent.stop() for task {task_id}")
-                            # Wait a moment for the stop to take effect
-                            await asyncio.sleep(1.0)
-                            # If the task is still not done, cancel it
-                            if not agent_run_task.done():
-                                agent_run_task.cancel()
-                                logger.info(f"Cancelled agent task for {task_id} after calling stop()")
-                            # Return early with cancellation status
-                            return [{"status": "cancelled", "message": "Task cancelled during agent execution"}], []
-                        
-                        # Wait a short time before checking again
-                        await asyncio.sleep(0.5)
-                    
-                    # Get the result if task completed successfully
-                    history = await agent_run_task
-                    # Update report_config with the correct state (history)
-                    if report_config:
-                        report_config['state'] = agent.state
-                        ## report generation
-                        await generate_report(
-                            task=task_config.prompt,
-                            **report_config
-                        )
-                    # Get results
-                    final_result = history.final_result()
-                    final_result = json_repair.loads(final_result)
-                    
-                    # Simply convert the history to a string
-                    history_info = {
-                        "history_type": str(type(history)),
-                        "history_dir": str(dir(history)),
-                        "history_methods": {name: str(method) for name, method in inspect.getmembers(history, predicate=inspect.ismethod)},
-                    }
-                    
-                    # Try to get history as a dictionary
-                    try:
-                        if hasattr(history, "__dict__"):
-                            history_dict = history.__dict__
-                        elif hasattr(history, "model_dump"):
-                            history_dict = history.model_dump()
-                        else:
-                            history_dict = {"info": "Could not convert history to dictionary"}
-                        
-                        # Convert to JSON-serializable format
-                        history_json = json.loads(json.dumps(history_dict['history'], default=str))
-                    except Exception as e:
-                        history_json = {"history_error": str(e)}
-                    
-                    # Add to results
-                    all_results.append({
-                        "task_name": task_config.name,
-                        "result": final_result,
-                        "report_folder": report_config['report_folder'] if report_config else None
-                    })
-                    
-                    all_history.append({
-                        "history": history_json
-                    })
-                except asyncio.CancelledError:
-                    logger.info(f"Agent task for {task_config.name} was cancelled.")
-                    # Task was cancelled, check if we should continue with next task
-                    if task_id and CANCELLATION_FLAGS.get(task_id, False):
-                        logger.info(f"Task {task_id} was cancelled during execution, stopping all tasks.")
-                        # Ensure agent is properly stopped
-                        agent.stop()
-                        return [{"status": "cancelled", "message": f"Task cancelled during '{task_config.name}' execution"}], []
-                except Exception as e:
-                    if task_id and CANCELLATION_FLAGS.get(task_id, False):
-                        logger.info(f"Task {task_id} was cancelled during execution.")
-                        # Ensure agent is properly stopped even on exception
-                        agent.stop()
-                        return [{"status": "cancelled", "message": f"Task cancelled during error handling for '{task_config.name}'"}], []
-                    else:
-                        logger.error(f"Error running task: {e}")
-                        raise
+                # Replace individual memory params with memory_config
+                kwargs.pop("enable_memory")
+                kwargs["memory_config"] = memory_config
+            elif "enable_memory" in kwargs:
+                # If enable_memory is False, just remove it and memory_interval
+                kwargs.pop("enable_memory")
+                if "memory_interval" in kwargs:
+                    kwargs.pop("memory_interval")
             
-            return all_results, all_history
+            # Set required parameters
+            kwargs["task"] = task_config.prompt
+            kwargs["llm"] = llm
+            kwargs["controller"] = controller
+            kwargs["browser_session"] = browser_session
+            
+            # Debug log all parameters being passed to Agent
+            #logging.getLogger("RUN_TASKS").info("Agent signature: %s", inspect.signature(Agent))
+            #logging.getLogger("RUN_TASKS").info("Final kwargs keys: %r", list(kwargs.keys()))
+            
+            # Handle planner_llm parameter if specified
+            if "planner_llm" in kwargs:
+                if kwargs["planner_llm"] is True:
+                    # If planner_llm is set to True, use the same LLM
+                    kwargs["planner_llm"] = llm
+                elif isinstance(kwargs["planner_llm"], dict):
+                    # If planner_llm is a dictionary with configuration, create a new LLM instance
+                    try:
+                        from app.utils.llm_utils import create_custom_llm
+                        planner_config = kwargs["planner_llm"]
+                        # Create custom LLM for planner
+                        kwargs["planner_llm"] = create_custom_llm(
+                            provider=planner_config.get("provider", task_config.llm_provider),
+                            model=planner_config.get("model", task_config.llm_model),
+                            temperature=planner_config.get("temperature", task_config.llm_temperature)
+                        )
+                        logger.info(f"Created custom planner LLM with provider={planner_config.get('provider')}, model={planner_config.get('model')}")
+                    except Exception as e:
+                        logger.error(f"Error creating custom planner LLM: {str(e)}")
+                        # Fall back to using the main LLM
+                        kwargs["planner_llm"] = llm
+                        logger.info("Falling back to using the main LLM for planning")
+            if report_config:
+                if isinstance(report_config, dict):
+                    try:
+                        from app.utils.llm_utils import create_custom_llm
+                        report_config['reporter'] = create_custom_llm(
+                            provider=report_config.get("provider", task_config.llm_provider),
+                            model=report_config.get("model", task_config.llm_model),
+                            temperature=report_config.get("temperature", task_config.llm_temperature)
+                        )
+                        logger.info(f"Created custom report LLM with provider={report_config.get('provider')}, model={report_config.get('model')}")
+                    except Exception as e:
+                        logger.error(f"Error creating custom report LLM: {str(e)}")
+                else:
+                    raise ValueError("report_config must be a dictionary")
+            
+            try:
+                agent = Agent(**kwargs)
+                
+                # Add task_id as attribute for recording hook
+                if task_id:
+                    agent.task_id = task_id
+                else:
+                    agent.task_id = f"task_{i+1}"
+                    
+            except TypeError as e:
+                logger.error(f"Error creating Agent: {str(e)}")
+                # If we get a TypeError, it might be due to unexpected parameters
+                # Try to extract the problematic parameter name from the error message
+                error_msg = str(e)
+                if "got an unexpected keyword argument" in error_msg:
+                    param_name = error_msg.split("'")[-2]
+                    logger.error(f"Removing unsupported parameter: {param_name}")
+                    if param_name in kwargs:
+                        kwargs.pop(param_name)
+                        # Try again with the problematic parameter removed
+                        agent = Agent(**kwargs)
+                else:
+                    # Re-raise if it's not a parameter issue or couldn't be fixed
+                    raise
+            
+            # Define a cancellation check callback
+            async def check_cancellation():
+                if task_id and CANCELLATION_FLAGS.get(task_id, False):
+                    logger.info(f"Task {task_id} has been cancelled during execution. Forcing agent to stop.")
+                    return True
+                return False
+            
+            # Add cancellation check to agent
+            agent.cancellation_check = check_cancellation
+            
+            # Run agent
+            try:
+                # Create task for agent run so we can monitor cancellation separately
+                agent_run_task = asyncio.create_task(agent.run(
+                    max_steps=task_config.max_steps,
+                    #on_step_start=record_activity  # Add recording hook
+                ))
+                
+                # Monitor the agent task and check for cancellation
+                while not agent_run_task.done():
+                    # Check for cancellation every 0.5 seconds
+                    if task_id and CANCELLATION_FLAGS.get(task_id, False):
+                        logger.info(f"Cancellation detected for task {task_id}, aborting agent run.")
+                        # Call agent.stop() first to properly stop the agent
+                        agent.stop()
+                        logger.info(f"Called agent.stop() for task {task_id}")
+                        # Wait a moment for the stop to take effect
+                        await asyncio.sleep(1.0)
+                        # If the task is still not done, cancel it
+                        if not agent_run_task.done():
+                            agent_run_task.cancel()
+                            logger.info(f"Cancelled agent task for {task_id} after calling stop()")
+                        # Return early with cancellation status
+                        return [{"status": "cancelled", "message": "Task cancelled during agent execution"}], []
+                    
+                    # Wait a short time before checking again
+                    await asyncio.sleep(0.5)
+                
+                # Get the result if task completed successfully
+                history = await agent_run_task
+                # Update report_config with the correct state (history)
+                if report_config:
+                    report_config['state'] = agent.state
+                    ## report generation
+                    await generate_report(
+                        task=task_config.prompt,
+                        **report_config
+                    )
+                # Get results
+                final_result = history.final_result()
+                final_result = json_repair.loads(final_result)
+                
+                # Simply convert the history to a string
+                history_info = {
+                    "history_type": str(type(history)),
+                    "history_dir": str(dir(history)),
+                    "history_methods": {name: str(method) for name, method in inspect.getmembers(history, predicate=inspect.ismethod)},
+                }
+                
+                # Try to get history as a dictionary
+                try:
+                    if hasattr(history, "__dict__"):
+                        history_dict = history.__dict__
+                    elif hasattr(history, "model_dump"):
+                        history_dict = history.model_dump()
+                    else:
+                        history_dict = {"info": "Could not convert history to dictionary"}
+                    
+                    # Convert to JSON-serializable format
+                    history_json = json.loads(json.dumps(history_dict['history'], default=str))
+                except Exception as e:
+                    history_json = {"history_error": str(e)}
+                
+                # Add to results
+                all_results.append({
+                    "task_name": task_config.name,
+                    "result": final_result,
+                    "report_folder": report_config['report_folder'] if report_config else None
+                })
+                
+                all_history.append({
+                    "history": history_json
+                })
+            except asyncio.CancelledError:
+                logger.info(f"Agent task for {task_config.name} was cancelled.")
+                # Task was cancelled, check if we should continue with next task
+                if task_id and CANCELLATION_FLAGS.get(task_id, False):
+                    logger.info(f"Task {task_id} was cancelled during execution, stopping all tasks.")
+                    # Ensure agent is properly stopped
+                    agent.stop()
+                    return [{"status": "cancelled", "message": f"Task cancelled during '{task_config.name}' execution"}], []
+            except Exception as e:
+                if task_id and CANCELLATION_FLAGS.get(task_id, False):
+                    logger.info(f"Task {task_id} was cancelled during execution.")
+                    # Ensure agent is properly stopped even on exception
+                    agent.stop()
+                    return [{"status": "cancelled", "message": f"Task cancelled during error handling for '{task_config.name}'"}], []
+                else:
+                    logger.error(f"Error running task: {e}")
+                    raise
+        await browser_session.close()
+        return all_results, all_history
     except Exception as e:
         traceback_str = traceback.format_exc()
         logger.error(f"Error in run_tasks: {traceback_str}")
@@ -520,7 +511,7 @@ def register_custom_action(controller, action_config):
         # Create a context with necessary imports
         context = {
             "ActionResult": ActionResult,
-            "BrowserContext": BrowserContext,
+            "BrowserContext": BrowserSession,
             "logging": logging,
             "pyperclip": pyperclip,
             "sanitize_response": sanitize_response,

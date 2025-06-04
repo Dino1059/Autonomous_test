@@ -34,7 +34,7 @@ def create_custom_llm(provider: str, model: str, temperature: float):
             top_p=1.0,
             top_k=40,
             max_output_tokens=2048,
-            google_api_key=os.getenv('GEMINI_API_KEY')
+            google_api_key=os.getenv('GOOGLE_API_KEY')
         )
     elif provider == "openai":
         return ChatOpenAI(
