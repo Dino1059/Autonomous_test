@@ -28,7 +28,6 @@ config:
   simulator_provider: "google"
   simulator_model: "gemini-2.0-flash"
   simulator_temperature: 0.5
-  custom_actions: []
   simulator_task: ""
   browser_config:
     user_data_dir: "C:/Users/anpro/.config/browseruse/profiles/default"
@@ -40,7 +39,7 @@ config:
 
 tasks:
   - name: "First task"
-    prompt: "Go to google and search for ${query}, then call the action gather_evidence for save screenshot. Done task"
+    prompt: "Test nagivation in this web"
     max_steps: 15
     output_model_fields: null
     exclude_actions:
@@ -59,7 +58,7 @@ tasks:
     memory_interval: 5
     initial_actions:
       - open_tab:
-          url: "https://www.facebook.com/"
+          url: "your website"
     
   - name: "Second task"
     prompt: "Go to youtube and play for ${query2}, then call the action gather_evidence for save screenshot"
