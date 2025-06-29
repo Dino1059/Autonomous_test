@@ -6,7 +6,7 @@ langchain-openai
 langchain-google-genai
 langchain-core
 lmnr[all]
-browser-use
+browser-use[memory]
 playwright
 # Dependencies for GIF/Video generation
 Pillow
