@@ -86,10 +86,11 @@ async def call_user_simulator(temp_params: str) -> ActionResult:
         user_simulator_task = SETTINGS.get("user_simulator_task", "")
         
         # Build the base prompt (fixed part)
-        base_prompt = "You are a test user interacting with a marketing assistant. "
-        base_prompt += "Your goal is to simulate realistic user responses to test the system. "
-        #base_prompt += "PLease always respond in JSON format. {{'response': '....', 'feedback': '....'}}. But for the last response, please add a 'grade' field . The grade should be a number between 0 and 100."
-        base_prompt += "Because you are testing the system, you need give the feedback at each step."
+        # base_prompt = "You are a test user interacting with a marketing assistant. "
+        # base_prompt += "Your goal is to simulate realistic user responses to test the system. "
+        # #base_prompt += "PLease always respond in JSON format. {{'response': '....', 'feedback': '....'}}. But for the last response, please add a 'grade' field . The grade should be a number between 0 and 100."
+        # base_prompt += "Because you are testing the system, you need give the feedback at each step."
+        base_prompt = ""
         
         # Add the flexible part if available
         if user_simulator_task:
@@ -133,6 +134,7 @@ async def call_user_simulator(temp_params: str) -> ActionResult:
             response = llm_worker.get_response(question, session_id)
     else:
         response = llm_worker.get_response(question, session_id)
+        #logger.info(f"Response: {response}")
     
     # Our get_response now returns the content directly, not an object with content attribute
     json_tester_response = json_repair.loads(response)
@@ -191,7 +193,7 @@ async def get_system_message(temp_params: str, browser: BrowserSession):
         top_p=1.0,
         top_k=40,
         max_output_tokens=2048,
-        google_api_key=os.getenv('GEMINI_API_KEY')
+        google_api_key=os.getenv('GOOGLE_API_KEY')
     )
 
     logger = logging.getLogger("EXTRACT SYSTEM MESSAGE")

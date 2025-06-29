@@ -1,6 +1,7 @@
 import os
 import sys
-sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+# Add the root directory to sys.path so we can import from src
+sys.path.append(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
 from src.llms.base import BaseLLMWorker
 
 def test_single_message():

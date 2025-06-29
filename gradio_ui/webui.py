@@ -65,7 +65,7 @@ def poll_results(task_id):
                 return data
         
         # Wait before polling again
-        time.sleep(5)
+        time.sleep(30)
     
     print("Max polling attempts reached. Task may still be running.")
     return None
@@ -158,7 +158,7 @@ def create_payload_from_template(template_name, placeholder_values, case_id):
     payload = {
         'tasks': template.get('tasks', []),
         'custom_actions': [],
-        'simulator_task': template.get('simulator_task', ''),
+        'simulator_task': template.get('config', {}).get('simulator_task', ''),
         'browser_config': template.get('config', {}).get('browser_config', {})
     }
     
@@ -275,13 +275,13 @@ def preview_template_and_get_placeholders(template_name):
         if report_config.get('model'):
             model_used.append(f"{task_name} Report: {report_config.get('provider', 'N/A')} / {report_config['model']}")
     
-    if model_used:
-        preview += f"**Models Used:**\n"
-        for model in model_used:
-            preview += f"  - {model}\n"
-        preview += "\n"
-    else:
-        preview += f"**Models Used:** None specified\n\n"
+    # if model_used:
+    #     preview += f"**Models Used:**\n"
+    #     for model in model_used:
+    #         preview += f"  - {model}\n"
+    #     preview += "\n"
+    # else:
+    #     preview += f"**Models Used:** None specified\n\n"
     
     # Add description from metadata
     description = metadata.get('description', 'No description available')
@@ -292,6 +292,7 @@ def preview_template_and_get_placeholders(template_name):
     if tags:
         preview += f"**Tags:** {', '.join(tags)}\n\n"
     
+    preview += "---\n"
     # User placeholders info
     placeholders = template.get('placeholders', {})
     if placeholders:
@@ -305,9 +306,10 @@ def preview_template_and_get_placeholders(template_name):
     
     # System placeholders
     system_placeholders = template.get('system_placeholders', [])
-    if system_placeholders:
-        preview += f"\n**System Parameters:** {', '.join(system_placeholders)} (auto-generated)\n"
+    # if system_placeholders:
+    #     preview += f"\n**System Parameters:** {', '.join(system_placeholders)} (auto-generated)\n"
     
+    preview += "\n---\n"
     # Tasks info (reuse the tasks variable from model extraction)
     preview += f"\n**Tasks ({len(tasks)}):**\n"
     for i, task in enumerate(tasks):
@@ -391,7 +393,7 @@ def update_input_visibility(template_name):
     return updates
 
 def read_markdown_report(case_id):
-    """Read markdown report from the task folder"""
+    """Read markdown report from the task folder and fix image paths for Gradio"""
     try:
         root_report = os.getenv("ROOT_REPORT", "E:/official_DopikAI/ai-agent-tester/gradio_ui/reports")
         report_folder = Path(root_report) / case_id
@@ -408,7 +410,34 @@ def read_markdown_report(case_id):
         # Read the first markdown file found
         markdown_file = markdown_files[0]
         with open(markdown_file, 'r', encoding='utf-8') as f:
-            return f.read()
+            content = f.read()
+        
+        # Fix image paths for Gradio display
+        # Convert relative paths like "../images/filename.png" to "/file=reports/images/filename.png"
+        import re
+        
+        def fix_image_path(match):
+            """Convert markdown image syntax to Gradio-compatible paths"""
+            alt_text = match.group(1)
+            relative_path = match.group(2)
+            
+            # Handle relative paths that go up one level (../images/)
+            if relative_path.startswith('../images/'):
+                image_filename = relative_path.replace('../images/', '')
+                gradio_path = f"/file=reports/images/{image_filename}"
+            elif relative_path.startswith('images/'):
+                image_filename = relative_path.replace('images/', '')
+                gradio_path = f"/file=reports/images/{image_filename}"
+            else:
+                # For other paths, try to construct a reasonable path
+                gradio_path = f"/file=reports/images/{Path(relative_path).name}"
+                
+            return f"![{alt_text}]({gradio_path})"
+        
+        # Replace image markdown syntax with Gradio-compatible paths
+        content = re.sub(r'!\[([^\]]*)\]\(([^)]+)\)', fix_image_path, content)
+        
+        return content
             
     except Exception as e:
         print(f"Error reading markdown report: {e}")
@@ -501,7 +530,7 @@ def poll_results_streaming(task_id, case_id):
             
             yield f"📊 Attempt {attempts}: Task status: {status}\n"
             
-            if status == "completed":
+            if status == "completed" or status == "failed":
                 yield "🎉 Task completed successfully!\n\n"
                 
                 # Display results
@@ -529,11 +558,6 @@ def poll_results_streaming(task_id, case_id):
                 
                 return
                 
-            elif status == "failed":
-                yield "❌ Task failed!\n"
-                error = data.get("error", "Unknown error")
-                yield f"Error: {error}\n"
-                return
                 
             elif status == "cancelled":
                 yield "⚠️ Task was cancelled\n"
@@ -582,13 +606,20 @@ def create_gradio_interface():
                 run_button = gr.Button("🚀 Run Test", variant="primary", size="lg")
                 
             with gr.Column(scale=2):
-                # Combined test results and report output
-                output_display = gr.Textbox(
-                    label="📊 Test Results & Report",
-                    lines=30,
-                    max_lines=30,
-                    show_copy_button=True,
-                    interactive=False
+                # Task status indicator
+                status_display = gr.Textbox(
+                    label="📊 Task Status",
+                    lines=10,
+                    show_copy_button=False,
+                    interactive=False,
+                    placeholder="Task status will appear here during execution..."
+                )
+                
+                # Final report output (Markdown)
+                report_display = gr.Markdown(
+                    label="📄 Final Report",
+                    value="",
+                    visible=True
                 )
         
         # Event handlers
@@ -599,13 +630,16 @@ def create_gradio_interface():
             return [preview] + input_updates
         
         def run_test_with_report(template_name, *inputs):
-            """Run test and display both results and markdown report in single output"""
-            output_text = ""
+            """Run test with simple status display, then show final markdown report"""
             case_id = None
             
-            # Stream test execution updates
+            # Show simple running status
+            yield "🔄 Running...", ""
+            
+            # Collect all updates to extract case_id, but don't show technical details
+            all_updates = ""
             for update in run_test_case(template_name, *inputs):
-                output_text += update
+                all_updates += update
                 
                 # Extract case_id for report loading
                 if 'Case ID:' in update and case_id is None:
@@ -615,9 +649,12 @@ def create_gradio_interface():
                             case_id = line.split('Case ID:')[1].strip()
                             break
                 
-                yield output_text
+                # Check if task failed during execution
+                if '❌' in update or 'failed' in update.lower() or 'error' in update.lower():
+                    yield "❌ Error", ""
+                    return
             
-            # After test completion, append markdown report to the same output
+            # Task completed, now load the report
             if case_id:
                 try:
                     # Wait for report generation
@@ -625,20 +662,18 @@ def create_gradio_interface():
                     
                     markdown_report = read_markdown_report(case_id)
                     if markdown_report:
-                        separator = "\n" + "="*80 + "\n"
-                        report_section = f"{separator}📄 MARKDOWN REPORT FOR CASE: {case_id}\n{separator}\n{markdown_report}\n"
-                        yield output_text + report_section
+                        # Show completed status and the markdown report
+                        yield "✅ Completed", markdown_report
                     else:
-                        root_report = os.getenv("ROOT_REPORT", "E:/official_DopikAI/ai-agent-tester/gradio_ui/reports")
-                        no_report_msg = f"\n\n📄 No markdown report found for case `{case_id}`\nExpected location: `{root_report}/{case_id}/`\n"
-                        yield output_text + no_report_msg
+                        no_report_msg = f"## ⚠️ No Report Available\n\nThe test completed but no report was generated."
+                        yield "⚠️ Completed (No Report)", no_report_msg
                         
                 except Exception as e:
-                    error_msg = f"\n\n📄 Error loading report: {str(e)}\n"
-                    yield output_text + error_msg
+                    error_report = f"## ❌ Error\n\nSomething went wrong while loading the report."
+                    yield "❌ Error", error_report
             else:
-                no_case_msg = "\n\n📄 Could not extract case ID to load report\n"
-                yield output_text + no_case_msg
+                error_report = "## ❌ Error\n\nThe test encountered an issue."
+                yield "❌ Error", error_report
         
         # Handle template changes
         template_dropdown.change(
@@ -651,7 +686,7 @@ def create_gradio_interface():
         run_button.click(
             fn=run_test_with_report,
             inputs=[template_dropdown] + dynamic_inputs,
-            outputs=output_display,
+            outputs=[status_display, report_display],
             show_progress=True
         )
         

@@ -236,6 +236,7 @@ async def run_tasks(
     
 
         await browser_session.start()
+        #logger.info(f"Browser session: {dir(browser_session)}")
         # Loop through tasks and execute them in the same context
         for i, task in enumerate(tasks):
             # Check if the task has been cancelled
@@ -419,7 +420,7 @@ async def run_tasks(
                     report_config['state'] = agent.state
                     ## report generation
                     await generate_report(
-                        task=task_config.prompt,
+                        task=simulator_task if simulator_task is not None else task_config.prompt,
                         **report_config
                     )
                 # Get results
@@ -474,6 +475,8 @@ async def run_tasks(
                 else:
                     logger.error(f"Error running task: {e}")
                     raise
+        await browser_session.browser_context.close()
+        await browser_session.stop()
         await browser_session.close()
         return all_results, all_history
     except Exception as e:

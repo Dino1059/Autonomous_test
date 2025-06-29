@@ -1,0 +1,161 @@
+metadata:
+  name: "Functionality Template"
+  description: "This is a template for testing functionality of a Website"
+  tags: ["website", "functionality", "template"]
+
+# Explicit user placeholder definitions
+placeholders:
+  title:
+    type: string
+    description: "The title of test case"
+    required: true
+    ui_type: text
+    # emoji: "📝"
+  
+  step_action:
+    type: string
+    description: "The action to be performed"
+    required: true
+    ui_type: textarea
+    emoji: "🎯"
+  
+  step_expected_result:
+    type: string
+    description: "The expected result of the action"
+    required: true
+    ui_type: textarea
+    emoji: "✅"
+  
+  max_retry:
+    type: number
+    description: "The maximum number of retries"
+    required: false
+    ui_type: number
+    emoji: "🔄"
+    default: 3
+
+  url_test:
+    type: string
+    description: "The URL to test"
+    required: true
+    ui_type: text
+    emoji: "🌐"
+    default: "https://example.com"
+
+# System placeholders (auto-generated, not user input)
+system_placeholders:
+  - session_id
+
+# Template configuration
+config:
+  laminar_api_key: ""
+  laminar_base_url: ""
+  laminar_http_port: 0
+  laminar_grpc_port: 0
+  simulator_provider: "google"
+  simulator_model: "gemini-2.0-flash"
+  simulator_temperature: 1.0
+  simulator_task: ""
+  browser_config:
+    user_data_dir: "C:/Users/anpro/.config/browseruse/profiles/default"
+    keep_alive: true
+    headless: false
+    viewport:
+      width: 1920
+      height: 1080
+
+tasks:
+  - name: "Functionality Test"
+    prompt: |
+      ## Task description:
+      You are now TestGPT, an experienced test engineer with more than 20 years of experience in Web UI testing.
+      You will be given a test case with the following components:
+      - title: A clear, descriptive test title
+      - step_action: Specific actions to perform in the UI
+      - step_expected_result: A precise, observable system reaction to the action
+      - max_retry: Maximum number of attempts to achieve the expected result
+
+      ## Test case details:
+      - title: ${title}
+      - step_action: ${step_action}
+      - step_expected_result: ${step_expected_result}
+      - max_retry: ${max_retry}
+
+      ## Important
+      - Develop a strategic plan based on the test case information for optimal test execution
+      - Format your output as JSON
+
+      ## JSON FORMAT
+      {
+        "feature": "${title}",
+        "feature_status": "pass/fail",
+        "detail_reason": "detailed explanation of your feature_status"
+      }
+
+      ## Evidence Collection
+      - Gather and save evidence for each test step
+      - Use the `gather_evidence` tool with these parameters:
+      - description: Detailed explanation of the step/feature/test case status. For multi-step tests, ensure each step has evidence
+      - screenshot_name: Screenshot filename (without .png extension)
+      - Call the `gather_evidence` tool in these cases:
+      - **After completing each nested test step**
+      - When encountering errors or unexpected results
+      - When evidence is crucial for test result documentation
+
+      ## Conventions
+      - Be patient with system responses. For image generation, allow 30-60 seconds
+      - Use the `wait` tool appropriately for system response times
+      - Format dates as DD/MM/YYYY
+    
+    max_steps: 20
+    output_model_fields:
+      type: object
+      properties:
+        feature:
+          type: string
+          description: "The feature being tested (e.g. Dashboard, Ad Campaign)"
+        feature_status:
+          type: string
+          description: "Test result status (working/not working)"
+        detail_reason:
+          type: string
+          description: "Detailed explanation of the test result"
+      required:
+        - "feature"
+        - "feature_status"
+        - "detail_reason"
+    # leave empty for now
+    exclude_actions: []
+    
+    llm_provider: "google"
+    llm_model: "gemini-2.0-flash"
+    llm_temperature: 0.0
+    enable_memory: true
+    memory_interval: 10
+    use_vision_for_planner: true
+    planner_interval: 3
+    is_planner_reasoning: true
+    
+    planner_llm:
+      provider: "openai"
+      model: "o4-mini-2025-04-16"
+      temperature: 0.0
+      extend_planner_system_message: "PLease note for the `wait` call instruction. It is important. Also remember take evidence."
+    
+    report_config:
+      provider: "openai"
+      model: "gpt-4.1-mini-2025-04-14"
+      temperature: 0.2
+      is_report_reasoning: false
+      use_vision_for_report: false
+      report_folder: ""
+      extend_report_system_message: ""
+
+    initial_actions:
+      - open_tab:
+          url: "${url_test}"
+
+custom_actions:
+  - name: "gather_evidence. This tool is used to gather the evidence for your testcase."
+    file: "custom_actions/gather_evidence.py"
+    function: "gather_evidence" 

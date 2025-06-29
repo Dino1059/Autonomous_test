@@ -51,14 +51,14 @@ tasks:
       - "call_user_simulator"
       - "get_system_message"
       - "click_the_send_button"
-    llm_provider: "openai"
-    llm_model: "gpt-4o-mini"
+    llm_provider: "google"
+    llm_model: "gemini-2.0-flash"
     llm_temperature: 0.1
     enable_memory: true
-    memory_interval: 5
+    memory_interval: 10
     initial_actions:
       - open_tab:
-          url: "your website"
+          url: ""
     
   - name: "Second task"
     prompt: "Go to youtube and play for ${query2}, then call the action gather_evidence for save screenshot"
@@ -93,7 +93,3 @@ custom_actions:
   - name: "gather_evidence. This tool is used to gather the evidence for your testcase."
     file: "custom_actions/gather_evidence.py"
     function: "gather_evidence"
-  
-  - name: "wait_for_response. Wait for AI response generation with configurable timeout."
-    file: "custom_actions/wait_for_response.py" 
-    function: "wait_for_response"

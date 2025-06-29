@@ -26,54 +26,49 @@ class ReportPrompt:
 			SystemMessage or HumanMessage depending on is_report_reasoning
 		"""
 		report_prompt_text = f"""
-You are a reporting agent responsible for generating a **professional Markdown report** that summarizes the outcome of a **browser automation task**.
+You are a reporting agent responsible for generating a **professional Markdown report** summarizing the outcome of a **browser automation task**.
 
-Your primary objective is to **clearly document how the automation fulfilled the user’s request**, including results, outputs, and any relevant technical notes.
+Your main goal is to **clearly document how the automation fulfilled the user’s request**, including results, outputs, screenshots (with *captions*), and relevant technical notes.
 
 ---
 
-**📝 User Request:**
+**📝 User Request:**  
 {self.task}
 
 ---
 
-### ✅ Your Markdown report must include the following sections:
+### ✅ Your Markdown report must follow this structure:
 
-1. ### 🧠 Request Summary
+1. ### 📊 Overview
+   - Confirm whether the automation succeeded or failed
+   - Summarize key results or final output
+   - List any errors, warnings, or unexpected behaviors encountered
 
-   * Restate what the user asked for
-   * Describe the intended goal of the automation
-
-2. ### 📊 Final Result
-
-   * Confirm whether the automation succeeded
-   * Include output data or final content (use tables or code blocks if applicable)
-   * Mention any errors, warnings, or unexpected behaviors
-
-3. ### 🔧 Technical Notes
-
-   * Briefly mention tools, libraries, or selectors used
-   * Only include what’s relevant to the result or troubleshooting
+2. ### 📋 Criteria Report
+   - Provide a table with 2 columns: **Criteria** and **Status**
+   - Ensure the number of criteria matches the components of the user request
+   - Use **Pass/Fail** to indicate status of each criterion
+   - Include screenshots as evidence, with each image followed by a caption using this format:  
+     `![Image](path/to/image.png)`  
+     `*caption*`
 
 ---
 
 ### 🖋️ Formatting Guidelines:
-
-* Use proper Markdown headers (`#`, `##`, `###`)
-* Use bullet points or lists for clarity
-* Display data using tables or code blocks where appropriate
-* **Display any screenshots or images using standard Markdown syntax**:
-  `![Description](path/to/image.png)`
+- Use appropriate Markdown headers (`#`, `##`, `###`)
+- Use bullet points or tables for clarity
+- Include code blocks for raw outputs, if needed
+- Embed screenshots with Markdown image syntax followed by *caption*
 
 ---
 
 ### 📌 Final Output Format:
 
-Return the Markdown report wrapped between the following markers:
-<start_of_report>
-[your markdown content here]
-<end_of_report>
+Return the full report **wrapped between these tags**:
 
+<start_of_report>  
+[your markdown content here]  
+<end_of_report>
 
 ---
 
@@ -81,27 +76,21 @@ Return the Markdown report wrapped between the following markers:
 
 <start_of_report>
 
-### 🧠 Request Summary  
-The user requested an automation script to extract the titles and prices of the first 10 products from a search results page on an e-commerce site.
+### 📊 Overview
+- ✅ Automation completed successfully upon receiving the command: `"DONE TASK. PLEASE EXIT!"`
+- **Feature Executed:** Simulating user interaction with campaign management interface  
+- **Status:** Working  
+- **Detail:** User confirmed task completion with exit command  
+![Final confirmation](screenshots/confirmation.png)  
+*Final confirmation – Task complete*
 
-### 📊 Final Result  
-- ✅ Successfully extracted 10 product entries  
-- Results are displayed below:
+### 📋 Criteria Report
 
-| Product Title | Price |
-|---------------|-------|
-| Example Item 1 | $19.99 |
-| Example Item 2 | $29.99 |
-
-- Screenshot of the final page state:  
-  ![Search Results Screenshot](../images/results_page.png)
-
-- Please use the screenshot path exactly as in the history summary.
-
-### 🔧 Technical Notes  
-- Used XPath selectors to locate product titles and prices  
-- Headless Chrome was used for browser automation  
-- Added a 2-second delay to ensure full page load before scraping
+| Criteria                                               | Status |
+|--------------------------------------------------------|--------|
+| Synthesize user intent across turns                    | ✅ Pass |
+| Summarize key info for verification                    | ❌ Fail |
+| Await user confirmation to exit                        | ✅ Pass |
 
 <end_of_report>
 

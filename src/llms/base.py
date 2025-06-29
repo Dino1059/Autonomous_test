@@ -165,8 +165,8 @@ class BaseLLMWorker:
 def main():
     """Main function for testing the LLM workers."""
     base_llm_worker = BaseLLMWorker(
-        provider="openrouter",
-        model="google/gemini-2.0-flash-exp:free",
+        provider="google",
+        model="gemini-2.0-flash",
         temperature=0.0,
         top_p=1.0,
         top_k=40,
@@ -217,6 +217,6 @@ def main():
         print(f"Failed follow-up question: {e}") 
 
 if __name__ == "__main__":
-    print(os.getenv("OPENAI_API_KEY"))
+    #print(os.getenv("OPENAI_API_KEY"))
     main()
 
