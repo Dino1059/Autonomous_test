@@ -13,16 +13,15 @@ Key improvements:
 
 import requests
 import json
-import os
 import time
 import gradio as gr
-from dotenv import load_dotenv
 from pathlib import Path
 import yaml
 import string
-
-load_dotenv()
-
+import os
+from dotenv import load_dotenv
+ROOT_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+load_dotenv(dotenv_path=os.path.join(ROOT_DIR, '.env'))
 # CONFIG
 API_BASE_URL = "http://localhost:8081"
 
@@ -144,7 +143,7 @@ def create_payload_from_template(template_name, placeholder_values, case_id):
     template = templates[template_name]
     
     # Get root report folder from environment
-    root_report = os.getenv("ROOT_REPORT", "E:/official_DopikAI/ai-agent-tester/gradio_ui/reports")
+    root_report = os.getenv("REPORT_FOLDER")
     report_folder_path = f"{root_report}/{case_id}"
     
     # Prepare substitutions with user values and system-generated values
@@ -395,7 +394,7 @@ def update_input_visibility(template_name):
 def read_markdown_report(case_id):
     """Read markdown report from the task folder and fix image paths for Gradio"""
     try:
-        root_report = os.getenv("ROOT_REPORT", "E:/official_DopikAI/ai-agent-tester/gradio_ui/reports")
+        root_report = os.getenv("REPORT_FOLDER")
         report_folder = Path(root_report) / case_id
         
         if not report_folder.exists():
@@ -553,7 +552,7 @@ def poll_results_streaming(task_id, case_id):
                         yield f"  Grade: {interaction.get('grade', 'N/A')}\n\n"
                 
                 # Note about report using case_id
-                root_report = os.getenv("ROOT_REPORT", "E:/official_DopikAI/ai-agent-tester/gradio_ui/reports")
+                root_report = os.getenv("REPORT_FOLDER")
                 yield f"📄 Report will be available at: {root_report}/{case_id}/\n"
                 
                 return

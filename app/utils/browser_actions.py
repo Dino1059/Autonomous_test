@@ -13,6 +13,10 @@ from typing import Dict, Any, List, Optional
 sys.path.append(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
 from browser_use.agent.views import ActionResult
 from browser_use.browser import BrowserSession
+from dotenv import load_dotenv
+ROOT_DIR = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+load_dotenv(dotenv_path=os.path.join(ROOT_DIR, '.env'))
+
 
 def sanitize_response(text: str) -> str:
     """Remove excessive newlines or formatting that may trigger paste bugs"""

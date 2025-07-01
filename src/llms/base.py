@@ -18,8 +18,8 @@ import sys
 import os
 sys.path.append(os.path.dirname(os.path.dirname(os.path.dirname(__file__))))
 from dotenv import load_dotenv
-
-load_dotenv()
+ROOT_DIR = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+load_dotenv(dotenv_path=os.path.join(ROOT_DIR, '.env'))
 
 settings = {
     # Server settings

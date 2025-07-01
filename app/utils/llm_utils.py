@@ -16,7 +16,11 @@ from langchain_core.messages import HumanMessage
 from dotenv import load_dotenv
 import sys
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-load_dotenv()
+from dotenv import load_dotenv
+ROOT_DIR = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+load_dotenv(dotenv_path=os.path.join(ROOT_DIR, '.env'))
+
+
 def create_llm_for_task(task_config: TaskConfig):
     """Create an LLM instance based on task configuration"""
     provider = task_config.llm_provider

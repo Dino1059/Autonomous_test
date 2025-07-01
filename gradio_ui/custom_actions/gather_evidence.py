@@ -1,3 +1,8 @@
+import os
+from pathlib import Path
+from dotenv import load_dotenv
+load_dotenv(dotenv_path=Path.cwd().parents[1] / '.env')
+
 async def gather_evidence(description: str, screenshot_name: str, browser: BrowserContext):
     """
     Capture a screenshot of the current page and save it to the reports/images folder.
@@ -16,7 +21,7 @@ async def gather_evidence(description: str, screenshot_name: str, browser: Brows
     import re
     
     # Setup base paths
-    base_path = Path("E:/official_DopikAI/ai-agent-tester/gradio_ui/reports")
+    base_path = Path(os.getenv("REPORT_FOLDER"))
     base_path.mkdir(parents=True, exist_ok=True)
 
     images_path = base_path / "images"
