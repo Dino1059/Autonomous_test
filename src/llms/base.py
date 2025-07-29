@@ -12,14 +12,9 @@ from langchain_core.prompts import ChatPromptTemplate, MessagesPlaceholder, Huma
 from langchain_core.runnables.history import RunnableWithMessageHistory
 import base64
 import requests
-from io import BytesIO
-
-import sys
 import os
-sys.path.append(os.path.dirname(os.path.dirname(os.path.dirname(__file__))))
 from dotenv import load_dotenv
-ROOT_DIR = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-load_dotenv(dotenv_path=os.path.join(ROOT_DIR, '.env'))
+load_dotenv()
 
 settings = {
     # Server settings
@@ -35,8 +30,6 @@ settings = {
     "openai_model": "gpt-4o-mini",
     "openrouter_model": "qwen/qwq-32b:free",
 }
-
-load_dotenv()
 
 class InMemoryHistory(BaseChatMessageHistory, BaseModel):
     """In memory implementation of chat message history."""
@@ -173,25 +166,6 @@ def main():
         max_output_tokens=2048,
     )
     session_id = "test-session"
-    # First message
-    # try:
-    #     response = base_llm_worker.get_response("Hello, how are you?", session_id)
-    #     print("First response:", response)
-        
-    #     print('---------------------------------------------------------')
-    # except Exception as e:
-    #     print(f"Failed first message: {e}")
-
-    # # Second message referencing history
-    # try:
-    #     response = base_llm_worker.get_response("What did you just say?", session_id)
-    #     print("Second response:", response)
-        
-    #     print('---------------------------------------------------------')
-    # except Exception as e:
-    #     print(f"Failed second message: {e}")
-
-    # Third message with image
     try:
         # Test with multiple images
         image_urls = [
@@ -217,6 +191,4 @@ def main():
         print(f"Failed follow-up question: {e}") 
 
 if __name__ == "__main__":
-    #print(os.getenv("OPENAI_API_KEY"))
     main()
-

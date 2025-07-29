@@ -30,8 +30,6 @@ from app.utils.llm_utils import create_llm_for_task, create_model_from_schema, g
 from app.serializers.models import TaskConfig, BrowserConfig
 from playwright.async_api import async_playwright
 
-sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-from dotenv import load_dotenv
 load_dotenv()
 
 
@@ -215,8 +213,6 @@ async def run_tasks(
                 return [{"status": "cancelled", "message": "Task cancelled before execution"}], []
                 
 
-        # Load environment variables
-        load_dotenv()
         
         # Initialize browser configuration
         final_browser_config = {}
@@ -225,14 +221,16 @@ async def run_tasks(
         if browser_config:
             final_browser_config = browser_config.model_dump(exclude_none=True)
             logger.info(f"Using provided browser_config: {final_browser_config}")
-            # browser_profile = BrowserProfile(
-            #     **final_browser_config
-            # )
-            browser_session = BrowserSession(**final_browser_config)
-            logger.info(f"Browser session: {browser_session}")
         else:
-            browser_profile = None
-            browser_session = BrowserSession()
+            final_browser_config = {}
+        
+        # Apply Docker-friendly browser configuration
+        from app.utils.browser_config import update_browser_config_for_docker
+        final_browser_config = update_browser_config_for_docker(final_browser_config)
+        logger.info(f"Using Docker-optimized browser_config: {final_browser_config}")
+        
+        browser_session = BrowserSession(**final_browser_config)
+        logger.info(f"Browser session: {browser_session}")
     
 
         await browser_session.start()
@@ -308,10 +306,6 @@ async def run_tasks(
             kwargs["llm"] = llm
             kwargs["controller"] = controller
             kwargs["browser_session"] = browser_session
-            
-            # Debug log all parameters being passed to Agent
-            #logging.getLogger("RUN_TASKS").info("Agent signature: %s", inspect.signature(Agent))
-            #logging.getLogger("RUN_TASKS").info("Final kwargs keys: %r", list(kwargs.keys()))
             
             # Handle planner_llm parameter if specified
             if "planner_llm" in kwargs:

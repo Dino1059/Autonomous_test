@@ -1,9 +1,10 @@
 import os
 from pathlib import Path
+from browser_use.agent.views import ActionResult
 from dotenv import load_dotenv
-load_dotenv(dotenv_path=Path.cwd().parents[1] / '.env')
+load_dotenv()
 
-async def gather_evidence(description: str, screenshot_name: str, browser: BrowserContext):
+async def gather_evidence(description: str, screenshot_name: str, browser):
     """
     Capture a screenshot of the current page and save it to the reports/images folder.
 
@@ -43,6 +44,7 @@ async def gather_evidence(description: str, screenshot_name: str, browser: Brows
 
     # Return relative path for reports
     short_screenshot_path = f"../images/{screenshot_name}.png"
+    print(f"images_path: {short_screenshot_path}")
     
     return ActionResult(
         extracted_content=f'Has gathered the evidence with description: {description}, screenshot_path: {short_screenshot_path}',

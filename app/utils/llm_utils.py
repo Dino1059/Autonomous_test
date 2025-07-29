@@ -15,10 +15,7 @@ import json
 from langchain_core.messages import HumanMessage
 from dotenv import load_dotenv
 import sys
-sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-from dotenv import load_dotenv
-ROOT_DIR = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-load_dotenv(dotenv_path=os.path.join(ROOT_DIR, '.env'))
+load_dotenv()
 
 
 def create_llm_for_task(task_config: TaskConfig):

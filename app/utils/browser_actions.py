@@ -14,8 +14,7 @@ sys.path.append(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(
 from browser_use.agent.views import ActionResult
 from browser_use.browser import BrowserSession
 from dotenv import load_dotenv
-ROOT_DIR = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-load_dotenv(dotenv_path=os.path.join(ROOT_DIR, '.env'))
+load_dotenv()
 
 
 def sanitize_response(text: str) -> str:

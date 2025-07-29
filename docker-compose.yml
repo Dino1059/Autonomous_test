@@ -1,0 +1,34 @@
+services:
+  autotester:
+    build: .
+    container_name: autotester-app
+    ports:
+      - "8081:8081"  # FastAPI backend
+      - "7860:7860"  # Gradio frontend
+      - "9222:9222"  # Chrome remote debugging
+    environment:
+      - PORT=8081
+      - HOST=0.0.0.0
+      - REPORT_FOLDER=${REPORT_FOLDER:-}
+      - DISPLAY=host.docker.internal:0
+      - OPENROUTER_API_KEY=${OPENROUTER_API_KEY:-}
+      - OPENAI_API_KEY=${OPENAI_API_KEY:-}
+      - ANTHROPIC_API_KEY=${ANTHROPIC_API_KEY:-}
+      - AZURE_ENDPOINT=${AZURE_ENDPOINT:-}
+      - AZURE_OPENAI_API_KEY=${AZURE_OPENAI_API_KEY:-}
+      - GOOGLE_API_KEY=${GOOGLE_API_KEY:-}
+      - DEEPSEEK_API_KEY=${DEEPSEEK_API_KEY:-}
+    volumes:
+      - ./demo_reports:/app/demo_reports
+      - ./logs:/app/logs
+      - ./browser_profiles:/app/browser_profiles
+      - ./app:/app/app
+      - ./gradio_ui:/app/gradio_ui
+      - ./src:/app/src
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8081/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s 

@@ -11,28 +11,28 @@ placeholders:
     required: true
     ui_type: text
     # emoji: "📝"
-  
+
   step_action:
     type: string
     description: "The action to be performed"
     required: true
     ui_type: textarea
     emoji: "🎯"
-  
+
   step_expected_result:
     type: string
     description: "The expected result of the action"
     required: true
     ui_type: textarea
     emoji: "✅"
-  
+
   max_retry:
     type: number
     description: "The maximum number of retries"
     required: false
     ui_type: number
     emoji: "🔄"
-    default: 3
+    default: 1
 
   url_test:
     type: string
@@ -57,7 +57,7 @@ config:
   simulator_temperature: 1.0
   simulator_task: ""
   browser_config:
-    user_data_dir: "C:/Users/anpro/.config/browseruse/profiles/default"
+    user_data_dir: "./browser_profiles/default"
     keep_alive: true
     headless: false
     viewport:
@@ -106,7 +106,7 @@ tasks:
       - Be patient with system responses. For image generation, allow 30-60 seconds
       - Use the `wait` tool appropriately for system response times
       - Format dates as DD/MM/YYYY
-    
+
     max_steps: 20
     output_model_fields:
       type: object
@@ -126,7 +126,7 @@ tasks:
         - "detail_reason"
     # leave empty for now
     exclude_actions: []
-    
+
     llm_provider: "google"
     llm_model: "gemini-2.0-flash"
     llm_temperature: 0.0
@@ -135,16 +135,16 @@ tasks:
     use_vision_for_planner: true
     planner_interval: 3
     is_planner_reasoning: true
-    
+
     planner_llm:
       provider: "openai"
       model: "o4-mini-2025-04-16"
       temperature: 0.0
       extend_planner_system_message: "PLease note for the `wait` call instruction. It is important. Also remember take evidence."
-    
+
     report_config:
       provider: "openai"
-      model: "gpt-4.1-mini-2025-04-14"
+      model: "gpt-4o-mini"
       temperature: 0.2
       is_report_reasoning: false
       use_vision_for_report: false
@@ -158,4 +158,4 @@ tasks:
 custom_actions:
   - name: "gather_evidence. This tool is used to gather the evidence for your testcase."
     file: "custom_actions/gather_evidence.py"
-    function: "gather_evidence" 
+    function: "gather_evidence"

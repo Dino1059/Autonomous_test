@@ -20,8 +20,7 @@ import yaml
 import string
 import os
 from dotenv import load_dotenv
-ROOT_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-load_dotenv(dotenv_path=os.path.join(ROOT_DIR, '.env'))
+load_dotenv()
 # CONFIG
 API_BASE_URL = "http://localhost:8081"
 
@@ -273,14 +272,6 @@ def preview_template_and_get_placeholders(template_name):
         report_config = task.get('report_config', {})
         if report_config.get('model'):
             model_used.append(f"{task_name} Report: {report_config.get('provider', 'N/A')} / {report_config['model']}")
-    
-    # if model_used:
-    #     preview += f"**Models Used:**\n"
-    #     for model in model_used:
-    #         preview += f"  - {model}\n"
-    #     preview += "\n"
-    # else:
-    #     preview += f"**Models Used:** None specified\n\n"
     
     # Add description from metadata
     description = metadata.get('description', 'No description available')
