@@ -18,6 +18,8 @@ import sys
 load_dotenv()
 
 
+
+
 def create_llm_for_task(task_config: TaskConfig):
     """Create an LLM instance based on task configuration"""
     provider = task_config.llm_provider
@@ -26,7 +28,10 @@ def create_llm_for_task(task_config: TaskConfig):
     
     return create_custom_llm(provider, model, temperature)
 
+
+
 def create_custom_llm(provider: str, model: str, temperature: float):
+    provider  = "hub1"
     """Create a custom LLM instance with specified provider, model and temperature"""
     if provider == "google":
         return ChatGoogleGenerativeAI(
@@ -49,6 +54,13 @@ def create_custom_llm(provider: str, model: str, temperature: float):
             temperature=temperature,
             api_key=os.getenv('OPENROUTER_API_KEY'),
             base_url="https://openrouter.ai/api/v1"
+        )
+    elif provider == "hub1":
+        return ChatOpenAI(
+            model=os.getenv('HUB1_MODEL_NAME', model),
+            temperature=temperature,
+            api_key=os.getenv('HUB1_API_KEY'),
+            base_url=os.getenv('HUB1_API_BASE_URL', 'https://hub1-api.softaibox.com/v1')
         )
     else:
         raise ValueError(f"Unsupported LLM provider: {provider}")

@@ -52,8 +52,8 @@ config:
   laminar_base_url: ""
   laminar_http_port: 0
   laminar_grpc_port: 0
-  simulator_provider: "google"
-  simulator_model: "gemini-2.0-flash"
+  simulator_provider: "hub1"
+  simulator_model: "unsloth/MiniMax-M2.7"
   simulator_temperature: 1.0
   simulator_task: ""
   browser_config:
@@ -127,8 +127,8 @@ tasks:
     # leave empty for now
     exclude_actions: []
 
-    llm_provider: "google"
-    llm_model: "gemini-2.0-flash"
+    llm_provider: "hub1"
+    llm_model: "unsloth/MiniMax-M2.7"
     llm_temperature: 0.0
     enable_memory: true
     memory_interval: 10
@@ -137,14 +137,14 @@ tasks:
     is_planner_reasoning: true
 
     planner_llm:
-      provider: "openai"
-      model: "o4-mini-2025-04-16"
+      provider: "hub1"
+      model: "unsloth/MiniMax-M2.7"
       temperature: 0.0
       extend_planner_system_message: "PLease note for the `wait` call instruction. It is important. Also remember take evidence."
 
     report_config:
-      provider: "openai"
-      model: "gpt-4o-mini"
+      provider: "hub1"
+      model: "unsloth/MiniMax-M2.7"
       temperature: 0.2
       is_report_reasoning: false
       use_vision_for_report: false

@@ -79,6 +79,13 @@ class BaseLLMWorker:
                 api_key=os.getenv('OPENAI_API_KEY'),
                 base_url="https://openrouter.ai/api/v1"
             )
+        elif provider == "hub1":
+            self.llm = ChatOpenAI(
+                model=model,
+                temperature=temperature,
+                api_key=os.getenv('HUB1_API_KEY'),
+                base_url=os.getenv('HUB1_API_BASE_URL', 'https://hub1-api.softaibox.com/v1')
+            )
         else:
             raise ValueError(f"Unsupported LLM provider: {provider}")
             

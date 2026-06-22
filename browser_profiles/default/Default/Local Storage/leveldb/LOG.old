@@ -1,3 +1,3 @@
-2025/07/13-15:12:51.561 365 Reusing MANIFEST /app/browser_profiles/default/Default/Local Storage/leveldb/MANIFEST-000001
-2025/07/13-15:12:51.613 365 Recovering log #3
-2025/07/13-15:12:51.618 365 Reusing old log /app/browser_profiles/default/Default/Local Storage/leveldb/000003.log 
+2026/06/21-12:39:09.255 4e58 Reusing MANIFEST D:\Test-UI-DopikAI\ai-agent-tester\browser_profiles\default\Default\Local Storage\leveldb/MANIFEST-000001
+2026/06/21-12:39:09.272 4e58 Recovering log #3
+2026/06/21-12:39:09.277 4e58 Reusing old log D:\Test-UI-DopikAI\ai-agent-tester\browser_profiles\default\Default\Local Storage\leveldb/000003.log 

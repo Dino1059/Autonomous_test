@@ -95,6 +95,8 @@ class RunTaskResponse(BaseModel):
 class EnvironmentVariablesRequest(BaseModel):
     openai_api_key: str = Field("", description="OpenAI API key")
     gemini_api_key: str = Field("", description="Google Gemini API key")
+    hub1_api_key: str = Field("", description="Hub1 API key")
+    hub1_api_base_url: str = Field("https://hub1-api.softaibox.com/v1", description="Hub1 API base URL")
 
 class MessageResponse(BaseModel):
     message: str = Field(..., description="Response message")
