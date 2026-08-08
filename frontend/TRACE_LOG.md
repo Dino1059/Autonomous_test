@@ -12,6 +12,7 @@
 
 | STT | Comment (Commit Message) | SHA | Nội dung tóm tắt thay đổi | Lệnh Revert về bản đó |
 | :-: | :--- | :-: | :--- | :--- |
+| **4** | `gộp tài liệu README.md và README-Docker.md` | `059ee6b` | gộp tài liệu README.md và README-Docker.md | `git checkout 059ee6b`<br/>*(hoặc `git reset --hard 059ee6b`)* |
 | **3** | `bản thiết kế v1 của dự án` | `f1c79f2` | bản thiết kế v1 của dự án | `git checkout f1c79f2`<br/>*(hoặc `git reset --hard f1c79f2`)* |
 | **1** | `bản thiết kế v1 của dự án` | `c343fc2` | Khởi tạo giao diện Landing Page Space Travel, bổ sung Auth Modal trượt 2 ô, đăng nhập `admin123/123`, chế độ White Mode (☀️/🌙) và toàn bộ AI Agent Tester Dashboard Workspace. | `git checkout c343fc2` <br/>*(hoặc `git reset --hard c343fc2`)* |
 | **2** | `Initial commit` | `807f60a` | Khởi tạo dự án gốc backend & cấu trúc ban đầu. | `git checkout 807f60a` <br/>*(hoặc `git reset --hard 807f60a`)* |
