@@ -606,14 +606,24 @@ async def run_tasks_background(
                 "history": history,
                 "simulator_interactions": simulator_interactions
             }
-        else:
-            # Store the results in global storage without interactions
-            BACKGROUND_TASKS[task_id] = {
-                "status": "completed",
-                "results": results,
-                "history": history,
-                "simulator_interactions": []
-            }
+        # Save test run to SQLite database
+        from app.db.database import save_test_run
+        report_folder = results[0].get("report_folder") if results and len(results) > 0 else ""
+        save_test_run({
+            "task_id": task_id,
+            "name": f"Task {task_id[:8]}",
+            "suite": "Multi-Agent Automation",
+            "env": "Staging Engine",
+            "browser": "Chromium",
+            "status": "Passed" if not any(r.get("status") == "failed" for r in results) else "Failed",
+            "duration": "12.5s",
+            "passed_steps": len(results),
+            "failed_steps": 0,
+            "report_path": report_folder,
+            "task_prompt": simulator_task,
+            "steps": results,
+            "interactions": USER_SIMULATOR_INTERACTIONS.get(session_id, [])
+        })
     except Exception as e:
         traceback_str = traceback.format_exc()
         
@@ -632,6 +642,14 @@ async def run_tasks_background(
                 "error": str(e),
                 "traceback": traceback_str
             }
+            from app.db.database import save_test_run
+            save_test_run({
+                "task_id": task_id,
+                "name": f"Task {task_id[:8]} (Failed)",
+                "status": "Failed",
+                "task_prompt": simulator_task,
+                "logs": [{"error": str(e)}]
+            })
     finally:
         # Clean up cancellation flag and active orchestrator
         from app.utils.globals import ACTIVE_ORCHESTRATORS

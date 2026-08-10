@@ -158,4 +158,21 @@ async def resume_task_endpoint(task_id: str):
     await orchestrator.resume_task()
     BACKGROUND_TASKS[task_id]["status"] = "running"
     return DataResponse(data=MessageResponse(message=f"Task {task_id} resumed"))
+
+@router.get("/history/runs", response_model=DataResponse[List[Dict[str, Any]]])
+async def get_test_runs_history():
+    """Get persistent test runs history from SQLite database"""
+    from app.db.database import get_all_test_runs
+    runs = get_all_test_runs(limit=50)
+    return DataResponse(data=runs, message="Retrieved test runs history")
+
+@router.get("/history/runs/{run_id}", response_model=DataResponse[Dict[str, Any]])
+async def get_test_run_detail(run_id: str):
+    """Get persistent test run detail from SQLite database"""
+    from app.db.database import get_test_run_by_id
+    run = get_test_run_by_id(run_id)
+    if not run:
+        raise HTTPException(status_code=404, detail="Test run not found in database")
+    return DataResponse(data=run, message="Retrieved test run details")
+
  

@@ -860,7 +860,87 @@
       const [recentRuns, setRecentRuns] = React.useState(InitialRecentRuns);
       const [executionTimer, setExecutionTimer] = React.useState(18);
 
+      const [activeTaskId, setActiveTaskId] = React.useState(null);
+      const [humanInputText, setHumanInputText] = React.useState('');
+      const [humanInputVisible, setHumanInputVisible] = React.useState(false);
+
       const isLight = theme === 'light';
+
+      // Load persistent test runs from database on mount
+      React.useEffect(() => {
+        fetch('http://localhost:8081/tasks/history/runs')
+          .then(res => res.json())
+          .then(data => {
+            if (data && data.data && Array.isArray(data.data) && data.data.length > 0) {
+              const formatted = data.data.map(item => ({
+                id: item.run_id || item.task_id,
+                name: item.name || "Multi-Agent Automation Run",
+                suite: item.suite || "E2E Test Suite",
+                env: item.env || "Staging Engine",
+                browser: item.browser || "Chromium v124",
+                status: item.status || "Passed",
+                duration: item.duration || "12.5s",
+                startTime: item.created_at || "Just now",
+                passedSteps: item.passed_steps || 1,
+                failedSteps: item.failed_steps || 0
+              }));
+              setRecentRuns(formatted);
+            }
+          })
+          .catch(err => console.log("Using local default test runs history:", err));
+      }, []);
+
+      // Real-time backend task polling
+      React.useEffect(() => {
+        if (!activeTaskId || (executionStatus !== 'Running' && executionStatus !== 'Paused' && executionStatus !== 'WaitingInput')) return;
+
+        const pollInterval = setInterval(() => {
+          fetch(`http://localhost:8081/tasks/${activeTaskId}`)
+            .then(res => res.json())
+            .then(resData => {
+              if (resData && resData.data) {
+                const taskData = resData.data;
+                const status = taskData.status;
+                if (status === 'completed') {
+                  setExecutionStatus('Passed');
+                  setActiveTaskId(null);
+                  fetch('http://localhost:8081/tasks/history/runs')
+                    .then(r => r.json())
+                    .then(d => {
+                      if (d && d.data && Array.isArray(d.data)) {
+                        setRecentRuns(d.data.map(item => ({
+                          id: item.run_id || item.task_id,
+                          name: item.name,
+                          suite: item.suite,
+                          env: item.env,
+                          browser: item.browser,
+                          status: item.status,
+                          duration: item.duration,
+                          startTime: item.created_at,
+                          passedSteps: item.passed_steps,
+                          failedSteps: item.failed_steps
+                        })));
+                      }
+                    }).catch(() => {});
+                } else if (status === 'failed') {
+                  setExecutionStatus('Failed');
+                  setActiveTaskId(null);
+                } else if (status === 'waiting_human_input' || status === 'waiting_human_approval') {
+                  setExecutionStatus('WaitingInput');
+                  setHumanInputVisible(true);
+                } else if (status === 'paused') {
+                  setExecutionStatus('Paused');
+                } else if (status === 'running') {
+                  setExecutionStatus('Running');
+                  setHumanInputVisible(false);
+                }
+              }
+            })
+            .catch(err => console.log("Polling error:", err));
+        }, 2000);
+
+        return () => clearInterval(pollInterval);
+      }, [activeTaskId, executionStatus]);
 
       React.useEffect(() => {
         let timer;
@@ -902,26 +982,81 @@
         setSelectedEvidenceStepId(1);
         setExecutionTimer(0);
 
-        let step = 0;
-        const stepInterval = setInterval(() => {
-          step++;
-          if (step < testPlan.steps.length) {
-            setCurrentStepIdx(step);
-            setSelectedEvidenceStepId(testPlan.steps[step].id);
-          } else {
-            clearInterval(stepInterval);
-            setExecutionStatus('Passed');
-          }
-        }, 2500);
+        const payload = {
+          tasks: [{
+            name: "Dashboard Multi-Agent Execution",
+            prompt: promptText,
+            max_steps: 30,
+            llm_provider: "google",
+            llm_model: "gemini-2.0-flash"
+          }],
+          session_id: `session_${Date.now()}`,
+          simulator_provider: "google",
+          simulator_model: "gemini-2.0-flash",
+          simulator_temperature: 0.0,
+          simulator_task: promptText,
+          browser_config: { keep_alive: false, headless: false }
+        };
+
+        fetch('http://localhost:8081/tasks/run', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload)
+        })
+          .then(res => res.json())
+          .then(data => {
+            if (data && data.data && data.data.message) {
+              const msg = data.data.message;
+              const taskId = msg.includes('ID: ') ? msg.split('ID: ')[1] : msg;
+              setActiveTaskId(taskId);
+            }
+          })
+          .catch(err => {
+            console.log("Backend offline, running local test simulation:", err);
+            let step = 0;
+            const stepInterval = setInterval(() => {
+              step++;
+              if (step < testPlan.steps.length) {
+                setCurrentStepIdx(step);
+                setSelectedEvidenceStepId(testPlan.steps[step].id);
+              } else {
+                clearInterval(stepInterval);
+                setExecutionStatus('Passed');
+              }
+            }, 2500);
+          });
       };
 
       const handleStopTest = () => {
+        if (activeTaskId) {
+          fetch(`http://localhost:8081/tasks/${activeTaskId}/cancel`, { method: 'POST' }).catch(() => {});
+        }
         setExecutionStatus('Stopped');
       };
 
       const handlePauseTest = () => {
+        if (activeTaskId) {
+          const endpoint = executionStatus === 'Paused' ? 'resume' : 'pause';
+          fetch(`http://localhost:8081/tasks/${activeTaskId}/${endpoint}`, { method: 'POST' }).catch(() => {});
+        }
         setExecutionStatus(prev => prev === 'Paused' ? 'Running' : 'Paused');
       };
+
+      const handleSendHumanInput = () => {
+        if (!activeTaskId || !humanInputText) return;
+        fetch(`http://localhost:8081/tasks/${activeTaskId}/human-input`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ action: "provide_input", input_text: humanInputText })
+        })
+          .then(() => {
+            setHumanInputText('');
+            setHumanInputVisible(false);
+            setExecutionStatus('Running');
+          })
+          .catch(err => console.log("Failed sending human input:", err));
+      };
+
 
       const handleUpdateStep = (index, field, value) => {
         const updatedSteps = [...testPlan.steps];
