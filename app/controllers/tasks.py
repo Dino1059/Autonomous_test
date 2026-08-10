@@ -45,11 +45,26 @@ async def run_tasks_endpoint(request: RunTaskRequest, background_tasks: Backgrou
 
 @router.get("/{task_id}", response_model=DataResponse[Dict[str, Any]])
 async def get_task_status(task_id: str):
-    """Get the status and results of a task"""
+    """Get the status and real-time results of a task"""
     if task_id not in BACKGROUND_TASKS:
         raise HTTPException(status_code=404, detail="Task not found")
     
-    return DataResponse(data=BACKGROUND_TASKS[task_id])
+    response_data = dict(BACKGROUND_TASKS[task_id])
+    
+    # Merge active orchestrator context if running
+    from app.utils.globals import ACTIVE_ORCHESTRATORS
+    orchestrator = ACTIVE_ORCHESTRATORS.get(task_id)
+    if orchestrator and hasattr(orchestrator, "context"):
+        ctx = orchestrator.context
+        response_data["status"] = ctx.status
+        response_data["current_step_index"] = ctx.current_step_index
+        response_data["sub_goals"] = ctx.sub_goals
+        response_data["execution_logs"] = ctx.execution_logs
+        response_data["browser_snapshots"] = ctx.browser_snapshots
+        response_data["active_agent"] = "BrowserExecutor" if ctx.status == "running" else ("UserSimulator" if "waiting" in ctx.status else "Planner")
+
+    return DataResponse(data=response_data)
+
 
 @router.post("/{task_id}/cancel", response_model=DataResponse[MessageResponse])
 async def cancel_task(task_id: str):
