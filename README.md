@@ -2,10 +2,9 @@
 
 AI Agent Tester là một hệ thống kiểm thử trình duyệt tự động (Autonomous Browser Testing Framework) tích hợp AI Agent. Hệ thống tự động khám phá luồng người dùng, tự tạo kịch bản kiểm thử (Test Plan), thực thi tự động qua trình duyệt Playwright và tự động thu thập bằng chứng kiểm thử (API validation, Screenshots, Logs, Visual Diff).
 
-Hệ thống hỗ trợ đa giao diện linh hoạt:
-- 🎨 **React SPA Dashboard Workspace**: Giao diện hiện đại tích hợp Prompt Generator, Live Playwright Viewport, Step Timeline & Evidence Inspector, White/Dark Mode toggle (Khuyên dùng).
-- 🎛️ **Gradio Web Interface**: Giao diện quản lý các mẫu test YAML (Templates).
-- ⚡ **FastAPI Backend Service**: Hệ thống RESTful API điều phối các tác vụ kiểm thử và kết nối với các mô hình LLM.
+Hệ thống thống nhất sử dụng **1 Giao diện Duy nhất (React SPA Dashboard)** kết nối trực tiếp với **FastAPI Backend Server**:
+- 🎨 **React SPA Dashboard Workspace**: Giao diện chính tích hợp Prompt-to-Test Generator, Live Playwright Viewport, Real-time Step Monitor, Evidence Inspector, và White/Dark Mode toggle.
+- ⚡ **FastAPI Backend Service**: Hệ thống RESTful API điều phối các tác vụ kiểm thử, thực thi trình duyệt Playwright và lưu trữ dữ liệu vào CSDL SQLite (`autotester.db`).
 
 ---
 
@@ -26,12 +25,9 @@ playwright install
 cp .env.example .env
 # (Chỉnh sửa file .env để điền các API Key của bạn)
 
-# 4. Khởi chạy các Dịch vụ
+# 4. Khởi chạy Dịch vụ
 # - Chạy Backend FastAPI Server (Port 8081)
 python app/main.py --port 8081 --host 0.0.0.0
-
-# - Chạy Gradio WebUI (Port 7860) - Mở tab terminal mới
-python gradio_ui/webui.py
 
 # - Chạy React Dashboard SPA (Port 8088) - Mở tab terminal mới
 python3 -m http.server 8088
@@ -39,7 +35,7 @@ python3 -m http.server 8088
 
 ---
 
-### Cách 2: Khởi chạy bằng Docker & Docker Compose (Khuyên dùng cho Production/DevOps)
+### Cách 2: Khởi chạy bằng Docker & Docker Compose
 
 #### Yêu cầu tiền đề:
 - Docker & Docker Compose đã được cài đặt.
@@ -57,25 +53,15 @@ docker-compose logs -f
 docker-compose down
 ```
 
-#### Sử dụng Makefile (Nếu có cài Make):
-```bash
-make quick-start   # Xây dựng và khởi chạy ứng dụng
-make dev-start     # Khởi chạy ở chế độ Development (hỗ trợ Hot Reload)
-make stop          # Dừng toàn bộ các container
-make logs          # Xem log hệ thống
-make clean         # Dọn dẹp các container và image cũ
-```
-
 ---
 
 ## 📍 Các Cổng Truy cập (Access Points)
 
 | Dịch vụ | Địa chỉ Truy cập (URL) | Mô tả |
 | :--- | :--- | :--- |
-| 🎨 **React SPA Dashboard** | `http://localhost:8088` *(hoặc mở `frontend/index.html`)* | Giao diện điều khiển AI Agent Tester chính (Đăng nhập Demo: `admin123` / `123`). |
-| 🎛️ **Gradio WebUI** | `http://localhost:7860` | Giao diện quản lý & chạy kịch bản test từ file mẫu YAML. |
-| 📚 **FastAPI Swagger Docs** | `http://localhost:8081/docs` | Tài liệu API RESTful tương tác trực tiếp. |
-| 🟢 **API Health Check** | `http://localhost:8081/health` | Kiểm tra trạng thái hoạt động của Backend Server. |
+| 🎨 **React SPA Dashboard** | `http://localhost:8088` *(hoặc mở `frontend/index.html`)* | Giao diện điều khiển duy nhất của AI Agent Tester (Đăng nhập Demo: `admin123` / `123`). |
+| 📚 **FastAPI Swagger Docs** | `http://localhost:8081/docs` | Tài liệu RESTful API công khai để kết nối trực tiếp. |
+| 🟢 **API Health Check** | `http://localhost:8081/health` | Kiểm tra trạng thái sức khỏe của Backend Server. |
 
 ---
 
@@ -107,7 +93,7 @@ LAMINAR_BASE_URL=
 LAMINAR_HTTP_PORT=
 LAMINAR_GRPC_PORT=
 
-# Thư mục lưu trữ báo cáo kiểm thử
+# Thư mục lưu trữ báo cáo kiểm thử & CSDL
 REPORT_FOLDER=./demo_reports
 
 # Cấu hình Server Backend
@@ -121,19 +107,16 @@ HOST=0.0.0.0
 
 ```
 AI-Agent-Tester/
-├── frontend/             # Giao diện React SPA Dashboard (index.html, TRACE_LOG.md)
-├── app/                  # FastAPI Backend Server (Controllers, Routers, Task Execution, Playwright integration)
-│   ├── controllers/      # API Controllers (tasks.py, actions.py, settings.py)
-│   ├── utils/            # Utility functions (task_execution.py, browser_actions.py, llm_utils.py)
-│   └── main.py           # FastAPI Entry point
-├── gradio_ui/            # Gradio Web Interface & YAML templates
-│   ├── webui.py          # Gradio app launcher
-│   └── templates_agent/  # Mẫu kịch bản YAML
-├── demo_reports/         # Thư mục chứa báo cáo kết quả test, ảnh screenshot & logs
-├── src/                  # Các gói phụ trợ LLM Workers
+├── frontend/             # Giao diện React SPA Dashboard duy nhất (index.html, TRACE_LOG.md)
+├── app/                  # FastAPI Backend Server & Database Core
+│   ├── controllers/      # REST API Controllers (tasks.py, actions.py, settings.py)
+│   ├── db/               # PostgreSQL & SQLite Persistence (`database.py`, `autotester.db`)
+│   ├── utils/            # Execution & Browser Actions (task_execution.py, browser_actions.py)
+│   └── main.py           # FastAPI Application Entry point
+├── demo_reports/         # Thư mục chứa báo cáo kết quả test, ảnh screenshot & JSON traces
 ├── docker-compose.yml    # Cấu hình Docker Compose dịch vụ
 ├── Dockerfile            # Docker Image build specification
-├── Makefile              # Các câu lệnh tắt vận hành Docker
+├── Makefile              # Lệnh tắt vận hành container
 └── TRACE_LOG.md          # Nhật ký thay đổi hệ thống & bảng mã commit SHA
 ```
 
@@ -142,23 +125,22 @@ AI-Agent-Tester/
 ## 🛠️ Tính năng & Quy trình Kiểm thử (Core Features & Workflow)
 
 1. **Prompt-to-Test Generator**: Nhập prompt ngôn ngữ tự nhiên (ví dụ: *"Kiểm tra tính năng quên mật khẩu trên trang test.com"*).
-2. **Planner Agent**: Tự động sinh ra **Structured Test Plan** đầy đủ các bước.
-3. **Interactive Step Editor**: Cho phép sửa, xóa, thêm bước hoặc thay đổi thứ tự kịch bản trước khi chạy.
+2. **Planner Agent**: Tự động sinh ra **Structured Test Plan** đầy đủ các bước qua `POST /tasks/generate-plan`.
+3. **Interactive Step Editor**: Sửa, xóa, thêm bước hoặc thay đổi thứ tự kịch bản trước khi thực thi.
 4. **Live Playwright Viewport**: Quan sát trực tiếp màn hình trình duyệt Playwright thao tác tự động (`1920x1080`, 60 FPS).
 5. **Agent Step Monitor**: Giám sát từng bước theo thời gian thực (Step X/Y, Action, Observation, Next step).
 6. **Timeline & Multi-Evidence Viewer**: Thu thập bằng chứng tự động gồm **API Validation** (Status Code, Latency, Response Payload), **Screenshots**, **Agent Logs**, **Console Logs** và **Visual Diff**.
 7. **White / Dark Mode Toggle**: Chuyển đổi linh hoạt giữa giao diện Dark Mode và Light Mode (☀️/🌙).
+8. **SQLite Database Sync**: Tự động lưu vết tất cả đợt test vào `autotester.db` và hiển thị trên bảng **Recent Test Runs**.
 
 ---
 
 ## 🔧 Troubleshooting (Xử lý sự cố thường gặp)
 
 1. **Lỗi xung đột Cổng (Port conflicts)**:
-   - Nếu cổng `8081`, `7860` hoặc `8088` đã bị chiếm dụng, hãy chỉnh sửa cổng trong file `.env`, `docker-compose.yml` hoặc đổi tham số `--port` khi chạy lệnh python.
+   - Chỉnh sửa cổng trong file `.env`, `docker-compose.yml` hoặc tham số `--port` nếu cổng `8081` hoặc `8088` đã bị chiếm dụng.
 2. **Lỗi thiếu Trình duyệt Playwright**:
-   - Chạy lệnh `playwright install` hoặc `python -m playwright install` để tải về binary của Chromium/Firefox/WebKit.
-3. **Cơ chế Secret Protection trên GitHub**:
-   - Không được commit API key thực vào file `.env.example` hoặc mã nguồn công khai.
+   - Chạy lệnh `playwright install` để cài đặt binary của Chromium.
 
 ---
 

@@ -956,24 +956,57 @@
         if (!promptText.trim()) return;
         setIsGenerating(true);
         setHasPlanGenerated(false);
-        setTimeout(() => {
-          setIsGenerating(false);
-          setHasPlanGenerated(true);
-          setTestPlan({
-            objective: `Test scenario derived from: "${promptText}"`,
-            targetUrl: promptText.includes('test.com') ? "https://test.com/forgot-password" : "https://app.example.com",
-            preconditions: ["Target app service online", "Session state initialized"],
-            testData: { user: "demo_tester@test.com", inputPayload: "valid_request" },
-            steps: [
-              { id: 1, action: "Open URL", selector: "https://test.com/login", expected: "Target page loaded successfully" },
-              { id: 2, action: "Click Element", selector: "#forgot-password-link", expected: "Navigation to reset form" },
-              { id: 3, action: "Fill Input Field", selector: "#email-input", expected: "Test email inserted" },
-              { id: 4, action: "Click Send Link Button", selector: "#send-reset-btn", expected: "POST /api/auth/forgot-password 200 OK" },
-              { id: 5, action: "Verify Success Toast", selector: ".toast-success", expected: "Confirmation toast displayed" },
-              { id: 6, action: "Validate API Response", selector: "POST /api/auth/forgot-password", expected: "JSON response payload valid" }
-            ]
+
+        fetch('http://localhost:8081/tasks/generate-plan', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            prompt: promptText,
+            llm_provider: 'google',
+            llm_model: 'gemini-2.0-flash'
+          })
+        })
+          .then(res => res.json())
+          .then(resData => {
+            setIsGenerating(false);
+            setHasPlanGenerated(true);
+            if (resData && resData.data) {
+              const p = resData.data;
+              setTestPlan({
+                objective: p.objective || `Test scenario derived from: "${promptText}"`,
+                targetUrl: p.target_url || "https://test.com/forgot-password",
+                preconditions: p.preconditions || ["Target app service online", "Session state initialized"],
+                testData: p.test_data || { user: "demo_tester@test.com", inputPayload: "valid_request" },
+                steps: p.steps || [
+                  { id: 1, action: "Open URL", selector: "https://test.com/login", expected: "Target page loaded successfully" },
+                  { id: 2, action: "Click Element", selector: "#forgot-password-link", expected: "Navigation to reset form" },
+                  { id: 3, action: "Fill Input Field", selector: "#email-input", expected: "Test email inserted" },
+                  { id: 4, action: "Click Send Link Button", selector: "#send-reset-btn", expected: "POST /api/auth/forgot-password 200 OK" },
+                  { id: 5, action: "Verify Success Toast", selector: ".toast-success", expected: "Confirmation toast displayed" },
+                  { id: 6, action: "Validate API Response", selector: "POST /api/auth/forgot-password", expected: "JSON response payload valid" }
+                ]
+              });
+            }
+          })
+          .catch(err => {
+            console.log("Backend offline, using fallback plan generator:", err);
+            setIsGenerating(false);
+            setHasPlanGenerated(true);
+            setTestPlan({
+              objective: `Test scenario derived from: "${promptText}"`,
+              targetUrl: promptText.includes('test.com') ? "https://test.com/forgot-password" : "https://app.example.com",
+              preconditions: ["Target app service online", "Session state initialized"],
+              testData: { user: "demo_tester@test.com", inputPayload: "valid_request" },
+              steps: [
+                { id: 1, action: "Open URL", selector: "https://test.com/login", expected: "Target page loaded successfully" },
+                { id: 2, action: "Click Element", selector: "#forgot-password-link", expected: "Navigation to reset form" },
+                { id: 3, action: "Fill Input Field", selector: "#email-input", expected: "Test email inserted" },
+                { id: 4, action: "Click Send Link Button", selector: "#send-reset-btn", expected: "POST /api/auth/forgot-password 200 OK" },
+                { id: 5, action: "Verify Success Toast", selector: ".toast-success", expected: "Confirmation toast displayed" },
+                { id: 6, action: "Validate API Response", selector: "POST /api/auth/forgot-password", expected: "JSON response payload valid" }
+              ]
+            });
           });
-        }, 1200);
       };
 
       const handleConfirmAndRun = () => {

@@ -4,7 +4,7 @@ services:
     container_name: autotester-app
     ports:
       - "8081:8081"  # FastAPI backend
-      - "7860:7860"  # Gradio frontend
+      - "8088:8088"  # React SPA frontend
       - "9222:9222"  # Chrome remote debugging
     environment:
       - PORT=8081
@@ -23,7 +23,7 @@ services:
       - ./logs:/app/logs
       - ./browser_profiles:/app/browser_profiles
       - ./app:/app/app
-      - ./gradio_ui:/app/gradio_ui
+      - ./frontend:/app/frontend
       - ./src:/app/src
     restart: unless-stopped
     healthcheck:
@@ -31,4 +31,4 @@ services:
       interval: 30s
       timeout: 10s
       retries: 3
-      start_period: 40s 
+      start_period: 40s

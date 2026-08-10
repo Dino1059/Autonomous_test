@@ -12,6 +12,8 @@
 
 | STT | Comment (Commit Message) | SHA | Nội dung tóm tắt thay đổi | Lệnh Revert về bản đó |
 | :-: | :--- | :-: | :--- | :--- |
+| **13** | `chuẩn hóa 1 UI duy nhất React SPA, xóa gradio_ui và agent_tester` | `ce5abcd` | chuẩn hóa 1 UI duy nhất React SPA, xóa gradio_ui và agent_tester | `git checkout ce5abcd`<br/>*(hoặc `git reset --hard ce5abcd`)* |
+| **12** | `chuẩn hóa 1 UI duy nhất React SPA, xóa gradio_ui và agent_tester` | `831506b` | chuẩn hóa 1 UI duy nhất React SPA, xóa gradio_ui và agent_tester | `git checkout 831506b`<br/>*(hoặc `git reset --hard 831506b`)* |
 | **11** | `Đấu nối màn hình Playwright Viewport real-time và bảng giám sát Multi-Agent Status vào React Dashboard UI` | `b4fdd93` | Đấu nối màn hình Playwright Viewport real-time và bảng giám sát Multi-Agent Status vào React Dashboard UI | `git checkout b4fdd93`<br/>*(hoặc `git reset --hard b4fdd93`)* |
 | **10** | `Bổ sung requests vào requirements.txt và cập nhật start.sh tự động kích hoạt agent_tester venv` | `7071a6f` | Bổ sung requests vào requirements.txt và cập nhật start.sh tự động kích hoạt agent_tester venv | `git checkout 7071a6f`<br/>*(hoặc `git reset --hard 7071a6f`)* |
 | **9** | `Cấu hình hỗ trợ PostgreSQL database cho AutoTester Framework` | `c71f75a` | Cấu hình hỗ trợ PostgreSQL database cho AutoTester Framework | `git checkout c71f75a`<br/>*(hoặc `git reset --hard c71f75a`)* |
