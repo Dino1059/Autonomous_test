@@ -12,6 +12,7 @@
 
 | STT | Comment (Commit Message) | SHA | Nội dung tóm tắt thay đổi | Lệnh Revert về bản đó |
 | :-: | :--- | :-: | :--- | :--- |
+| **9** | `Cấu hình hỗ trợ PostgreSQL database cho AutoTester Framework` | `c71f75a` | Cấu hình hỗ trợ PostgreSQL database cho AutoTester Framework | `git checkout c71f75a`<br/>*(hoặc `git reset --hard c71f75a`)* |
 | **8** | `Tích hợp SQLite Database & kết nối React Dashboard UX với backend Multi-Agent API` | `19484d3` | Tích hợp SQLite Database & kết nối React Dashboard UX với backend Multi-Agent API | `git checkout 19484d3`<br/>*(hoặc `git reset --hard 19484d3`)* |
 | **7** | `Cập nhật TRACE_LOG.md cho phiên bản Multi-Agent v2.0.0` | `9976f47` | Cập nhật TRACE_LOG.md cho phiên bản Multi-Agent v2.0.0 | `git checkout 9976f47`<br/>*(hoặc `git reset --hard 9976f47`)* |
 | **6** | `Triển khai kiến trúc Multi-Agent & Human-in-the-Loop Framework` | `6f59ca2` | Triển khai kiến trúc Multi-Agent & Human-in-the-Loop Framework | `git checkout 6f59ca2`<br/>*(hoặc `git reset --hard 6f59ca2`)* |

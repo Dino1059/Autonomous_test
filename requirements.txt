@@ -14,3 +14,4 @@ gradio==5.25.2
 json-repair==0.42.0
 loguru==0.7.3
 pyobjtojson==0.3
+psycopg2-binary==2.9.12
