@@ -12,6 +12,7 @@
 
 | STT | Comment (Commit Message) | SHA | Nội dung tóm tắt thay đổi | Lệnh Revert về bản đó |
 | :-: | :--- | :-: | :--- | :--- |
+| **6** | `Triển khai kiến trúc Multi-Agent & Human-in-the-Loop Framework` | `6f59ca2` | Triển khai kiến trúc Multi-Agent & Human-in-the-Loop Framework | `git checkout 6f59ca2`<br/>*(hoặc `git reset --hard 6f59ca2`)* |
 | **5** | `Remove demo_reports` | `b6fc36e` | Remove demo_reports | `git checkout b6fc36e`<br/>*(hoặc `git reset --hard b6fc36e`)* |
 | **4** | `gộp tài liệu README.md và README-Docker.md` | `059ee6b` | gộp tài liệu README.md và README-Docker.md | `git checkout 059ee6b`<br/>*(hoặc `git reset --hard 059ee6b`)* |
 | **3** | `bản thiết kế v1 của dự án` | `f1c79f2` | bản thiết kế v1 của dự án | `git checkout f1c79f2`<br/>*(hoặc `git reset --hard f1c79f2`)* |

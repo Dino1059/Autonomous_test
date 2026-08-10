@@ -561,6 +561,13 @@ async def run_tasks_background(
         # Initialize cancellation flag for this task
         CANCELLATION_FLAGS[task_id] = False
         
+        # Instantiate Multi-Agent Orchestrator for this task
+        from app.agents.orchestrator import Orchestrator
+        from app.utils.globals import ACTIVE_ORCHESTRATORS
+        orchestrator = Orchestrator(task_id=task_id)
+        await orchestrator.initialize(prompt=simulator_task if simulator_task else "Run browser automation test")
+        ACTIVE_ORCHESTRATORS[task_id] = orchestrator
+
         # Update task status to running
         BACKGROUND_TASKS[task_id] = {"status": "running"}
         
@@ -626,6 +633,10 @@ async def run_tasks_background(
                 "traceback": traceback_str
             }
     finally:
-        # Clean up cancellation flag
+        # Clean up cancellation flag and active orchestrator
+        from app.utils.globals import ACTIVE_ORCHESTRATORS
+        if task_id in ACTIVE_ORCHESTRATORS:
+            ACTIVE_ORCHESTRATORS.pop(task_id, None)
         if task_id in CANCELLATION_FLAGS:
-            CANCELLATION_FLAGS.pop(task_id) 
+            CANCELLATION_FLAGS.pop(task_id, None)
+ 

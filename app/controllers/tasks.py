@@ -119,4 +119,43 @@ async def get_all_tasks():
     return DataResponse(data={
         "tasks": task_list,
         "count": len(task_list)
-    }) 
+    })
+
+@router.post("/{task_id}/human-input", response_model=DataResponse[MessageResponse])
+async def submit_human_input(task_id: str, payload: Dict[str, Any]):
+    """Submit human input / approval to a waiting multi-agent task"""
+    from app.utils.globals import ACTIVE_ORCHESTRATORS
+    if task_id not in BACKGROUND_TASKS:
+        raise HTTPException(status_code=404, detail="Task not found")
+        
+    orchestrator = ACTIVE_ORCHESTRATORS.get(task_id)
+    if not orchestrator:
+        raise HTTPException(status_code=400, detail="Active orchestrator not found for task")
+        
+    await orchestrator.provide_human_input(payload)
+    return DataResponse(data=MessageResponse(message=f"Human input submitted successfully for task {task_id}"))
+
+@router.post("/{task_id}/pause", response_model=DataResponse[MessageResponse])
+async def pause_task_endpoint(task_id: str):
+    """Pause a running multi-agent task"""
+    from app.utils.globals import ACTIVE_ORCHESTRATORS
+    orchestrator = ACTIVE_ORCHESTRATORS.get(task_id)
+    if not orchestrator:
+        raise HTTPException(status_code=400, detail="Active orchestrator not found for task")
+        
+    await orchestrator.pause_task()
+    BACKGROUND_TASKS[task_id]["status"] = "paused"
+    return DataResponse(data=MessageResponse(message=f"Task {task_id} paused"))
+
+@router.post("/{task_id}/resume", response_model=DataResponse[MessageResponse])
+async def resume_task_endpoint(task_id: str):
+    """Resume a paused multi-agent task"""
+    from app.utils.globals import ACTIVE_ORCHESTRATORS
+    orchestrator = ACTIVE_ORCHESTRATORS.get(task_id)
+    if not orchestrator:
+        raise HTTPException(status_code=400, detail="Active orchestrator not found for task")
+        
+    await orchestrator.resume_task()
+    BACKGROUND_TASKS[task_id]["status"] = "running"
+    return DataResponse(data=MessageResponse(message=f"Task {task_id} resumed"))
+ 

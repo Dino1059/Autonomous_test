@@ -25,6 +25,11 @@ USER_SIMULATOR_INTERACTIONS: Dict[str, List[Dict[str, Any]]] = {}
 # Format: {task_id: bool} where True means the task should be cancelled
 CANCELLATION_FLAGS: Dict[str, bool] = {}
 
+# Global dictionary to store active Orchestrator instances for Human-in-the-Loop interactions
+# Format: {task_id: Orchestrator}
+ACTIVE_ORCHESTRATORS: Dict[str, Any] = {}
+
+
 # Global variables for simulation settings
 simulator_provider = ""
 simulator_model = ""
