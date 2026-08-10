@@ -12,6 +12,7 @@
 
 | STT | Comment (Commit Message) | SHA | Nội dung tóm tắt thay đổi | Lệnh Revert về bản đó |
 | :-: | :--- | :-: | :--- | :--- |
+| **7** | `Cập nhật TRACE_LOG.md cho phiên bản Multi-Agent v2.0.0` | `9976f47` | Cập nhật TRACE_LOG.md cho phiên bản Multi-Agent v2.0.0 | `git checkout 9976f47`<br/>*(hoặc `git reset --hard 9976f47`)* |
 | **6** | `Triển khai kiến trúc Multi-Agent & Human-in-the-Loop Framework` | `6f59ca2` | Triển khai kiến trúc Multi-Agent & Human-in-the-Loop Framework | `git checkout 6f59ca2`<br/>*(hoặc `git reset --hard 6f59ca2`)* |
 | **5** | `Remove demo_reports` | `b6fc36e` | Remove demo_reports | `git checkout b6fc36e`<br/>*(hoặc `git reset --hard b6fc36e`)* |
 | **4** | `gộp tài liệu README.md và README-Docker.md` | `059ee6b` | gộp tài liệu README.md và README-Docker.md | `git checkout 059ee6b`<br/>*(hoặc `git reset --hard 059ee6b`)* |
@@ -23,7 +24,27 @@
 
 ### 📜 LỊCH SỬ THAY ĐỔI CHI TIẾT THEO PHIÊN BẢN (DETAILED CHANGELOG)
 
+#### 📌 [v2.0.0] - Triển khai Kiến trúc Multi-Agent & Human-in-the-Loop Framework
+- **Data Schemas & Protocols**:
+  - Dựng giao thức tin nhắn `AgentMessage` (`TASK_PLAN`, `ACTION_REQUEST`, `SIMULATION_QUERY`, `HUMAN_INTERVENTION_NEEDED`, `EVALUATION_REQUEST`, v.v.).
+  - Dựng bộ nhớ chia sẻ `SharedExecutionContext` lưu giữ sub-goals, DOM snapshots, logs và trạng thái làm việc.
+- **Agent Event Bus & Base Engine**:
+  - Xây dựng `AgentEventBus` xử lý routing tin nhắn bất đồng bộ qua `asyncio.Queue`.
+  - Định nghĩa lớp trừu tượng `BaseAgent` chuẩn hóa phương thức xử lý tin nhắn.
+- **4 Agent Chuyên biệt**:
+  - `PlannerAgent`: Phân tích kịch bản test và sinh JSON sub-goals.
+  - `BrowserExecutionAgent`: Tương tác UI Playwright / `browser-use`.
+  - `UserSimulatorAgent`: Đóng vai người dùng sinh dữ liệu form / trả lời câu hỏi tự động.
+  - `ReportEvaluatorAgent`: Đánh giá trace logs và sinh file báo cáo Markdown.
+- **Orchestrator Manager Agent & Human Control**:
+  - Xây dựng `Orchestrator` điều phối toàn bộ luồng công việc giữa 4 Agent.
+  - Tích hợp cơ chế can thiệp con người thời gian thực (`provide_human_input`, `pause_task`, `resume_task`).
+  - Thêm các API endpoints mới `/tasks/{task_id}/human-input`, `/tasks/{task_id}/pause`, `/tasks/{task_id}/resume` tại Task Controller.
+- **Testing**:
+  - Tạo bộ test tự động `src/tests/test_multi_agent_workflow.py` kiểm thử thành công 100% các thành phần của framework.
+
 #### 📌 [v1.7.0] - Thêm Nút bấm Chuyển đổi Giao diện White Mode / Light Mode
+
 - Thêm icon Mặt trời (☀️) / Mặt trăng (🌙) trên thanh Navigation.
 - Chuyển đổi linh hoạt toàn bộ hệ thống sang **White / Light Mode** với bộ theme kính mờ nền sáng (`bg-slate-50`, `liquid-glass` viền mờ tối, chữ `text-slate-900` sắc nét).
 
