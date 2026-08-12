@@ -12,6 +12,9 @@
 
 | STT | Comment (Commit Message) | SHA | Nội dung tóm tắt thay đổi | Lệnh Revert về bản đó |
 | :-: | :--- | :-: | :--- | :--- |
+| **16** | `docs & feat: cap nhat README, browser_config va chuan hoa React SPA Dashboard` | `8c6fe85` | docs & feat: cap nhat README, browser_config va chuan hoa React SPA Dashboard | `git checkout 8c6fe85`<br/>*(hoặc `git reset --hard 8c6fe85`)* |
+| **15** | `[LOCAL] sửa browser headless mode — hiển thị cửa sổ Chromium khi chạy local` | *(chưa commit)* | Viết lại `app/utils/browser_config.py`: auto-detect Docker vs Local; `headless=False` khi chạy local → cửa sổ Chromium mở ra; `headless=True` chỉ trong Docker. Sửa lỗi `OSError: Read-only file system /app` khi chạy local bằng cách dùng `os.getcwd()` thay cho đường dẫn cứng `/app`. | *(chưa push — thay đổi cục bộ)* |
+| **14** | `[LOCAL] xóa gradio_ui và agent_tester, thống nhất 1 UI React SPA` | *(chưa commit)* | Xóa thư mục `gradio_ui/` và `agent_tester/`; cập nhật `README.md` loại bỏ mọi tham chiếu Gradio; cập nhật `docker-compose.yml` (port 8088 thay 7860, volume `frontend/` thay `gradio_ui/`); thêm `browser_profiles/` vào `.gitignore`. | *(chưa push — thay đổi cục bộ)* |
 | **13** | `chuẩn hóa 1 UI duy nhất React SPA, xóa gradio_ui và agent_tester` | `ce5abcd` | chuẩn hóa 1 UI duy nhất React SPA, xóa gradio_ui và agent_tester | `git checkout ce5abcd`<br/>*(hoặc `git reset --hard ce5abcd`)* |
 | **12** | `chuẩn hóa 1 UI duy nhất React SPA, xóa gradio_ui và agent_tester` | `831506b` | chuẩn hóa 1 UI duy nhất React SPA, xóa gradio_ui và agent_tester | `git checkout 831506b`<br/>*(hoặc `git reset --hard 831506b`)* |
 | **11** | `Đấu nối màn hình Playwright Viewport real-time và bảng giám sát Multi-Agent Status vào React Dashboard UI` | `b4fdd93` | Đấu nối màn hình Playwright Viewport real-time và bảng giám sát Multi-Agent Status vào React Dashboard UI | `git checkout b4fdd93`<br/>*(hoặc `git reset --hard b4fdd93`)* |

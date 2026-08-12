@@ -890,9 +890,30 @@
           .catch(err => console.log("Using local default test runs history:", err));
       }, []);
 
-      // Real-time backend task polling
+      // Real-time backend task polling & Playwright SSE stream (Task 1.5)
       React.useEffect(() => {
         if (!activeTaskId || (executionStatus !== 'Running' && executionStatus !== 'Paused' && executionStatus !== 'WaitingInput')) return;
+
+        // Connect to real-time SSE stream endpoint /tasks/stream/{task_id}
+        let eventSource;
+        try {
+          eventSource = new EventSource(`http://localhost:8081/tasks/stream/${activeTaskId}`);
+          eventSource.onmessage = (event) => {
+            try {
+              const data = JSON.parse(event.data);
+              if (data.status === 'completed') {
+                setExecutionStatus('Passed');
+              } else if (data.status === 'failed') {
+                setExecutionStatus('Failed');
+              }
+            } catch (e) {}
+          };
+          eventSource.onerror = () => {
+            if (eventSource) eventSource.close();
+          };
+        } catch (err) {
+          console.log("SSE Stream connection error:", err);
+        }
 
         const pollInterval = setInterval(() => {
           fetch(`http://localhost:8081/tasks/${activeTaskId}`)
@@ -939,7 +960,10 @@
             .catch(err => console.log("Polling error:", err));
         }, 2000);
 
-        return () => clearInterval(pollInterval);
+        return () => {
+          clearInterval(pollInterval);
+          if (eventSource) eventSource.close();
+        };
       }, [activeTaskId, executionStatus]);
 
       React.useEffect(() => {

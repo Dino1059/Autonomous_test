@@ -5,11 +5,46 @@ import uuid
 from fastapi import APIRouter, BackgroundTasks, HTTPException
 from typing import Dict, Any, List
 
-from app.serializers.models import RunTaskRequest, MessageResponse, DataResponse, RunTaskResponse
+from app.serializers.models import RunTaskRequest, MessageResponse, DataResponse, RunTaskResponse, GeneratePlanRequest, GeneratePlanResponse
 from app.utils.globals import BACKGROUND_TASKS, CANCELLATION_FLAGS
 from app.utils.task_execution import run_tasks_background
 
 router = APIRouter()
+
+@router.post("/generate-plan", response_model=DataResponse[GeneratePlanResponse])
+async def generate_plan_endpoint(request: GeneratePlanRequest):
+    """Generate a structured test plan from natural language prompt"""
+    prompt = request.prompt
+    
+    # Infer target URL from prompt or use standard fallback
+    target_url = "https://test.com/forgot-password"
+    import re
+    urls = re.findall(r'https?://[^\s]+', prompt)
+    if urls:
+        target_url = urls[0]
+    elif "github" in prompt.lower():
+        target_url = "https://github.com/login"
+    elif "login" in prompt.lower():
+        target_url = "https://app.example.com/login"
+        
+    steps = [
+        {"id": 1, "action": "Open Target URL", "selector": target_url, "expected": "Page loads with 200 OK status code"},
+        {"id": 2, "action": "Inspect Input Fields", "selector": "form input", "expected": "Input fields identified by DOM agent"},
+        {"id": 3, "action": "Fill Form Credentials", "selector": "#email-input, #password-input", "expected": "Test payload injected into input elements"},
+        {"id": 4, "action": "Trigger Submit Button", "selector": "button[type='submit']", "expected": "HTTP request sent and 200 OK payload returned"},
+        {"id": 5, "action": "Verify UI Response Toast", "selector": ".toast, .alert-success", "expected": "Success visual state verified"},
+        {"id": 6, "action": "Validate API Network Log", "selector": "POST /api/auth/verify", "expected": "JSON schema and response latency verified"}
+    ]
+    
+    plan = GeneratePlanResponse(
+        title=f"Autonomous E2E Test - {prompt[:30]}...",
+        objective=f"Execute end-to-end multi-agent verification for: '{prompt}'",
+        target_url=target_url,
+        preconditions=["Environment service health verified", "Headless browser session ready"],
+        test_data={"user": "demo_tester@test.com", "session": "active_token"},
+        steps=steps
+    )
+    return DataResponse(data=plan, message="Generated test plan successfully")
 
 @router.post("/run", response_model=DataResponse[MessageResponse])
 async def run_tasks_endpoint(request: RunTaskRequest, background_tasks: BackgroundTasks):
@@ -190,4 +225,49 @@ async def get_test_run_detail(run_id: str):
         raise HTTPException(status_code=404, detail="Test run not found in database")
     return DataResponse(data=run, message="Retrieved test run details")
 
- 
+
+# ── Task 1.1: Alias /run-steps → logic của /run (FE compatibility) ─────────
+@router.post("/run-steps", response_model=DataResponse[MessageResponse])
+async def run_steps_alias(request: RunTaskRequest, background_tasks: BackgroundTasks):
+    """Alias endpoint cho FE gọi /tasks/run-steps — delegates sang run_tasks_endpoint"""
+    return await run_tasks_endpoint(request, background_tasks)
+
+
+# ── Task 1.2: Stream task đang chạy gần nhất (FE gọi /tasks/stream/latest) ─
+@router.get("/stream/latest")
+async def stream_latest_task_events():
+    """Stream SSE events của task đang running gần nhất — FE compatibility"""
+    from fastapi.responses import StreamingResponse
+    import json
+    import asyncio
+
+    # Tìm task đang running
+    running = [
+        (tid, td) for tid, td in BACKGROUND_TASKS.items()
+        if td.get("status") == "running"
+    ]
+
+    async def empty_stream():
+        yield 'data: {"status": "no_active_task"}\n\n'
+
+    if not running:
+        return StreamingResponse(empty_stream(), media_type="text/event-stream")
+
+    # Lấy task mới nhất theo thứ tự xuất hiện cuối cùng
+    latest_task_id = running[-1][0]
+
+    async def event_generator(task_id: str):
+        for _ in range(120):  # timeout 120 giây
+            await asyncio.sleep(1)
+            task_data = BACKGROUND_TASKS.get(task_id, {})
+            status = task_data.get("status", "unknown")
+            payload = {"task_id": task_id, "status": status}
+            yield f"data: {json.dumps(payload)}\n\n"
+            if status in ("completed", "failed", "cancelled"):
+                break
+
+    return StreamingResponse(
+        event_generator(latest_task_id),
+        media_type="text/event-stream",
+        headers={"Cache-Control": "no-cache", "X-Accel-Buffering": "no"},
+    )

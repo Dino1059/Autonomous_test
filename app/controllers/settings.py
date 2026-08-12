@@ -27,4 +27,21 @@ async def update_environment(request: EnvironmentVariablesRequest):
         
         return DataResponse(data=MessageResponse(message="Environment variables updated successfully"))
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Failed to update environment variables: {str(e)}") 
+        raise HTTPException(status_code=500, detail=f"Failed to update environment variables: {str(e)}")
+
+
+# ── Task 1.3: GET current settings — FE gọi GET /settings ──────────────────
+@router.get("", response_model=DataResponse[dict])
+async def get_current_settings():
+    """Trả về settings hiện tại (các API keys đã mask) — alias cho FE"""
+    SENSITIVE_KEYS = {"OPENAI_API_KEY", "GEMINI_API_KEY", "GOOGLE_API_KEY",
+                      "HUB1_API_KEY", "OPENROUTER_API_KEY", "ANTHROPIC_API_KEY"}
+    settings = {}
+    for key in SENSITIVE_KEYS | {"HUB1_API_BASE_URL", "PORT", "HOST", "REPORT_FOLDER"}:
+        val = os.environ.get(key, "")
+        # Mask: chỉ hiện 8 ký tự đầu nếu là key
+        if val and key in SENSITIVE_KEYS:
+            settings[key] = val[:8] + "****" if len(val) > 8 else "****"
+        else:
+            settings[key] = val
+    return DataResponse(data=settings, message="Current settings")

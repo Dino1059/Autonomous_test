@@ -98,6 +98,19 @@ class EnvironmentVariablesRequest(BaseModel):
     hub1_api_key: str = Field("", description="Hub1 API key")
     hub1_api_base_url: str = Field("https://hub1-api.softaibox.com/v1", description="Hub1 API base URL")
 
+class GeneratePlanRequest(BaseModel):
+    prompt: str = Field(..., description="Natural language test prompt")
+    llm_provider: str = Field("google", description="LLM provider")
+    llm_model: str = Field("gemini-2.0-flash", description="LLM model name")
+
+class GeneratePlanResponse(BaseModel):
+    title: str = Field(..., description="Test plan title")
+    objective: str = Field(..., description="Test objective")
+    target_url: str = Field(..., description="Target web URL")
+    preconditions: List[str] = Field(default_factory=list, description="Preconditions")
+    test_data: Dict[str, Any] = Field(default_factory=dict, description="Test data key-value pairs")
+    steps: List[Dict[str, Any]] = Field(default_factory=list, description="Test steps list")
+
 class MessageResponse(BaseModel):
     message: str = Field(..., description="Response message")
 
