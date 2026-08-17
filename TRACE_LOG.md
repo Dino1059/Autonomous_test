@@ -12,7 +12,8 @@
 
 | STT | Comment (Commit Message) | SHA | Nội dung tóm tắt thay đổi | Lệnh Revert về bản đó |
 | :-: | :--- | :-: | :--- | :--- |
-| **16** | `docs & feat: cap nhat README, browser_config va chuan hoa React SPA Dashboard` | `8c6fe85` | docs & feat: cap nhat README, browser_config va chuan hoa React SPA Dashboard | `git checkout 8c6fe85`<br/>*(hoặc `git reset --hard 8c6fe85`)* |
+| **17** | `Update dashboard modules and test run workflows` | `8986a4f` | Update dashboard modules and test run workflows | `git checkout 8986a4f`<br/>*(hoặc `git reset --hard 8986a4f`)* |
+| **16** | `docs & feat: cap nhat README, browser_config va chuan hoa React SPA Dashboard` | `8c6fe85` | docs & feat: cap nhat README, browser_config va chuan hoa React SPA Dashboard, thêm alias và nối các endpoint giữa be và fe ,Kết nối SSE EventSource realtime trên Frontend | `git checkout 8c6fe85`<br/>*(hoặc `git reset --hard 8c6fe85`)* |
 | **15** | `[LOCAL] sửa browser headless mode — hiển thị cửa sổ Chromium khi chạy local` | *(chưa commit)* | Viết lại `app/utils/browser_config.py`: auto-detect Docker vs Local; `headless=False` khi chạy local → cửa sổ Chromium mở ra; `headless=True` chỉ trong Docker. Sửa lỗi `OSError: Read-only file system /app` khi chạy local bằng cách dùng `os.getcwd()` thay cho đường dẫn cứng `/app`. | *(chưa push — thay đổi cục bộ)* |
 | **14** | `[LOCAL] xóa gradio_ui và agent_tester, thống nhất 1 UI React SPA` | *(chưa commit)* | Xóa thư mục `gradio_ui/` và `agent_tester/`; cập nhật `README.md` loại bỏ mọi tham chiếu Gradio; cập nhật `docker-compose.yml` (port 8088 thay 7860, volume `frontend/` thay `gradio_ui/`); thêm `browser_profiles/` vào `.gitignore`. | *(chưa push — thay đổi cục bộ)* |
 | **13** | `chuẩn hóa 1 UI duy nhất React SPA, xóa gradio_ui và agent_tester` | `ce5abcd` | chuẩn hóa 1 UI duy nhất React SPA, xóa gradio_ui và agent_tester | `git checkout ce5abcd`<br/>*(hoặc `git reset --hard ce5abcd`)* |
@@ -108,3 +109,14 @@ frontend/
 ├── index.html        # Ứng dụng Single Page Application React (Landing Page + Sliding Auth Modal + Dashboard Workspace)
 └── TRACE_LOG.md      # Nhật ký lưu trữ lịch sử thay đổi, bảng commit SHA và lệnh Revert
 ```
+
+
+Nhập prompt → [Generate Plan] → POST /tasks/generate-plan → hiện Plan Review
+    ↓
+User edit/duyệt plan
+    ↓
+[Confirm & Run Test] → POST /tasks/run (chỉ gửi promptText, KHÔNG gửi steps đã review)
+    ↓
+Poll GET /tasks/{id} mỗi 2s → cập nhật executionStatus
+    ↓
+Khi done → refresh Recent Runs
